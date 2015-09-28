@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30723.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xmp", "xmp.vcxproj", "{ABE9A873-35E5-4BCA-B3ED-B4103AED2BF4}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sample01", "samples\sample01\sample01.vcxproj", "{D7A501A4-A0B7-45DD-9143-F202CD7D7709}"
+	ProjectSection(ProjectDependencies) = postProject
+		{ABE9A873-35E5-4BCA-B3ED-B4103AED2BF4} = {ABE9A873-35E5-4BCA-B3ED-B4103AED2BF4}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ABE9A873-35E5-4BCA-B3ED-B4103AED2BF4}.Debug|x64.ActiveCfg = Debug|x64
+		{ABE9A873-35E5-4BCA-B3ED-B4103AED2BF4}.Debug|x64.Build.0 = Debug|x64
+		{ABE9A873-35E5-4BCA-B3ED-B4103AED2BF4}.Release|x64.ActiveCfg = Release|x64
+		{ABE9A873-35E5-4BCA-B3ED-B4103AED2BF4}.Release|x64.Build.0 = Release|x64
+		{D7A501A4-A0B7-45DD-9143-F202CD7D7709}.Debug|x64.ActiveCfg = Debug|x64
+		{D7A501A4-A0B7-45DD-9143-F202CD7D7709}.Debug|x64.Build.0 = Debug|x64
+		{D7A501A4-A0B7-45DD-9143-F202CD7D7709}.Release|x64.ActiveCfg = Release|x64
+		{D7A501A4-A0B7-45DD-9143-F202CD7D7709}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

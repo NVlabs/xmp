@@ -1,0 +1,25 @@
+This directory contains a performance test framework.  It requires the GNU Multi-Precision (GMP) library to be installed.  
+To build edit the Makefile and set GMP_INCLUDE_DIR and GMP_LIB_DIR to the path to GMP. Then type make.
+
+This framework is currently not supported on Windows.
+
+Usage:
+
+./perf [-h] [-c threads] [-i iters] [-d device_list] [-s size_list] [-b bit_list] [-l start,end,increment,op], [-m count] [-e count]
+    order of command line parameters does not matter
+    -h:  prints this screen
+    -c:  eables a CPU run and specifies how many threads to use
+    -i:  the number of iterations
+    -d:  , or + separated list of device ordinals
+         , creates a new device group with the following device ordinals
+         + joins the next device ordinal to the current device group
+             for example 0,1+2 would create two device groups, the first with 0 and the second with 1 & 2.
+             devices in the same group are ran concurrently and their performance is aggregated.
+    -s:  , separated list sizes
+    -b:  , separated list bit sizes (precision)
+    -l:  specifies sizes to be set via a loop.  start is first size, end is bounds on max size, increment is the factor we add or multiply by, op can be '+' for addition and '*' for multiplication
+            for example  -l 1000,2000,100,+ specifies sizes 1000 to 2000 in increments of 100  (i.e 1000,1100,1200,...,2000)
+            and          -l 1000,2000,1.1,* specifies sizes 1000 to 2000 with multiplication factors 1.1 (i.e 1000,1100,1210,...,1948)
+    -m   overwrite the size parameter for the modulus with count
+    -e   overwrite the size parameter for the exponent with count
+

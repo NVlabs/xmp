@@ -19,3 +19,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
 IN THE SOFTWARE.
 ***/
+namespace xmp {
+  __device__ __forceinline__ int32_t count_leading_zeros(RegMP x) {
+    uint32_t top=0;
+    int32_t  msw=x.length();
+
+    #pragma unroll
+    for(int index=0;index<x.length();index++) {
+      top=(x[index]==0) ? top : x[index];
+      msw=(x[index]==0) ? msw : x.length()-index-1;
+    }
+    if(top==0)
+      return msw*32;
+    return msw*32 + __clz(top);
+  }
+}

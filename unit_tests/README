@@ -1,0 +1,4 @@
+This directory contains unit tests for verifying correctness of the XMP library. Building the unit tests requires 
+both Google gtest and the GNU Multi-Precision Library (GMP) to be installed.  To build modify the makefile and
+set GMP_INCLUDE_DIR, GMP_LIB_DIR, GTEST_INLCUDE_DIR, and GMP_LIB_DIR to the correct paths to these libraries.
+Then type make.  To run the tests use the command ./test_all
