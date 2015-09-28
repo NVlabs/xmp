@@ -38,8 +38,8 @@ IN THE SOFTWARE.
 
 
 int main() {
-  int i,w;
-  int N=15*1024*4;
+  uint32_t i,w;
+  uint32_t N=15*1024*4;
   int bits=1024;
   xmpIntegers_t base, mod, exp, out;
   uint32_t *b,*m,*e,*o;

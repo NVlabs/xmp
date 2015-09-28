@@ -18,6 +18,9 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\xmp.cu" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ABE9A873-35E5-4BCA-B3ED-B4103AED2BF4}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -180,46 +183,6 @@
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="src\include\implementations.h" />
-    <ClInclude Include="src\include\operators.h" />
-    <ClInclude Include="src\include\powm\powm.h" />
-    <ClInclude Include="src\include\powm\three_n.h" />
-    <ClInclude Include="src\include\ptx\ptx.h" />
-    <ClInclude Include="src\include\ptx\PTXChain_impl.h" />
-    <ClInclude Include="src\include\ptx\PTXInliner_impl.h" />
-    <ClInclude Include="src\include\regmp\add.h" />
-    <ClInclude Include="src\include\regmp\assignment.h" />
-    <ClInclude Include="src\include\regmp\basics.h" />
-    <ClInclude Include="src\include\regmp\clz.h" />
-    <ClInclude Include="src\include\regmp\div.h" />
-    <ClInclude Include="src\include\regmp\kar.h" />
-    <ClInclude Include="src\include\regmp\logic.h" />
-    <ClInclude Include="src\include\regmp\mul.h" />
-    <ClInclude Include="src\include\regmp\mul_maxwell_pascal.h" />
-    <ClInclude Include="src\include\regmp\mul_sqr_reduce.h" />
-    <ClInclude Include="src\include\regmp\np0.h" />
-    <ClInclude Include="src\include\regmp\reduce.h" />
-    <ClInclude Include="src\include\regmp\reduce_maxwell_pascal.h" />
-    <ClInclude Include="src\include\regmp\regmp.h" />
-    <ClInclude Include="src\include\regmp\rockroll.h" />
-    <ClInclude Include="src\include\regmp\shift.h" />
-    <ClInclude Include="src\include\regmp\sqr.h" />
-    <ClInclude Include="src\include\regmp\sqr_maxwell_pascal.h" />
-    <ClInclude Include="src\include\regmp\sub.h" />
-    <ClInclude Include="src\include\regmp\zero.h" />
-    <ClInclude Include="src\include\xmp.h">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <DeploymentContent>true</DeploymentContent>
-    </ClInclude>
-    <ClInclude Include="src\include\xmp_internal.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="src/xmp.cu" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.0.targets" />

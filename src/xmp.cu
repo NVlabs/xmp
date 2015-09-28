@@ -423,7 +423,7 @@ xmpError_t inline xmpIntegersExportInternal(xmpHandle_t handle, void* out, uint3
     return xmpErrorInvalidFormat;
 
   uint32_t limbs=in->nlimbs;
-  uint32_t w=limbs * sizeof(xmpLimb_t)/size;
+  uint32_t w = limbs * (uint32_t)sizeof(xmpLimb_t) / size;
   size_t bytes=count*limbs*sizeof(xmpLimb_t);
   if(endian==xmpNativeEndian && order==xmpNativeOrder && nails==0) {
     //common case, naitve endian and order, , nails=0, no temporary memory needed just copy in
