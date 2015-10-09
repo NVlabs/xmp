@@ -1,0 +1,3 @@
+Diffie-Hellman Key Exchange
+
+Generates a shared private key using the Diffie-Hellman exchange protocol.
