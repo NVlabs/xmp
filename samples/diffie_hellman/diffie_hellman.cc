@@ -152,7 +152,7 @@ int main() {
 
   end=wallclock();
   //Divide by 2 because we did both parts on the same system.  
-  printf("Exchange time: %lg, %d bit throughput: %lg exchanges/second\n", (end-start)/2, bits, count/(end-start)/2);
+  printf("Exchange time: %lg, %d bit throughput: %lg exchanges/second\n", (end-start)/2, bits, count/(end-start)*2);
 
   //validate
   //ar and br should be the same
