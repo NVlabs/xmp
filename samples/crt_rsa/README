@@ -1,0 +1,5 @@
+Chineese Remainder Theorem RSA example
+
+Encrypts and decrypts data using Pure RSA.  
+Please note that Pure RSA is insecure due to the lack of padding.  
+Padding would need to be added to this to make it secure.
