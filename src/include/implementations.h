@@ -758,8 +758,19 @@ __global__ void regmp_powm_kernel(powm_arguments_t powm_arguments, int32_t count
       break;
   }
 }
-
 template<bool use_sm_cache, bool gsl, int size>
+#if __CUDA_ARCH__ >= 200 && __CUDA_ARCH__ < 350 
+//Fermi and small Kepler (GK100),  already restricted to 63 registers
+#elif __CUDA_ARCH__ >= 350 && __CUDA_ARCH__ < 370
+//GK110,  allows up to 255 registers.  Restrict down to avoid occupancy issues.
+__launch_bounds__(128,8)
+#elif __CUDA_ARCH__ == 370   
+//GK210,  2x registers.  Go for maximum occupancy
+__launch_bounds__(128,16)
+#elif __CUDA_ARCH__ < 600 && __CUDA_ARCH__>= 500  //Maxwell
+//Maxwell 
+__launch_bounds__(128,6)
+#endif
 __global__ void digitmp_powm_kernel(powm_arguments_t powm_arguments, int32_t count) {
   xmpLimb_t *out_data=powm_arguments.out_data;
   int32_t    out_len=powm_arguments.out_len;
