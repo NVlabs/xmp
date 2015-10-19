@@ -308,7 +308,7 @@ __global__ void xmpTransform(word_t *output, word_t *input, uint32_t count, uint
 }
 
 
-xmpError_t inline xmpIntegersImportInternal(xmpHandle_t handle, xmpIntegers_t out, uint32_t count, uint32_t words, int32_t order, size_t size, int32_t endian, int32_t nails, void* in, bool async) {
+xmpError_t inline xmpIntegersImportInternal(xmpHandle_t handle, xmpIntegers_t out, uint32_t words, int32_t order, size_t size, int32_t endian, int32_t nails, void* in, uint32_t count, bool async) {
   XMP_CHECK_NE(in,NULL);
 
   //verify handle device and out device match
@@ -394,14 +394,14 @@ xmpError_t inline xmpIntegersImportInternal(xmpHandle_t handle, xmpIntegers_t ou
   return xmpErrorSuccess;
 }
 
-xmpError_t XMPAPI xmpIntegersImport(xmpHandle_t handle, xmpIntegers_t out, uint32_t count, uint32_t words, int32_t order, size_t size, int32_t endian, uint32_t nails, void* in) {
-  return xmpIntegersImportInternal(handle,out,count,words,order,size,endian,nails,in,false);
+xmpError_t XMPAPI xmpIntegersImport(xmpHandle_t handle, xmpIntegers_t out, uint32_t words, int32_t order, size_t size, int32_t endian, uint32_t nails, void* in, uint32_t count) {
+  return xmpIntegersImportInternal(handle,out,words,order,size,endian,nails,in,count,false);
 }
-xmpError_t XMPAPI xmpIntegersImportAsync(xmpHandle_t handle, xmpIntegers_t out, uint32_t count, uint32_t words, int32_t order, size_t size, int32_t endian, uint32_t nails, void* in) {
-  return xmpIntegersImportInternal(handle,out,count,words,order,size,endian,nails,in,true);
+xmpError_t XMPAPI xmpIntegersImportAsync(xmpHandle_t handle, xmpIntegers_t out, uint32_t words, int32_t order, size_t size, int32_t endian, uint32_t nails, void* in, uint32_t count) {
+  return xmpIntegersImportInternal(handle,out,words,order,size,endian,nails,in,count,true);
 }
 //export count integers of size bytes from in into out
-xmpError_t inline xmpIntegersExportInternal(xmpHandle_t handle, void* out, uint32_t count, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in, bool async) {
+xmpError_t inline xmpIntegersExportInternal(xmpHandle_t handle, void* out, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in, uint32_t count, bool async) {
   XMP_CHECK_NE(out,NULL);
 
   //verify handle device and in device match
@@ -489,12 +489,12 @@ xmpError_t inline xmpIntegersExportInternal(xmpHandle_t handle, void* out, uint3
   return xmpErrorSuccess;
 }
 
-xmpError_t XMPAPI xmpIntegersExport(xmpHandle_t handle, void* out, uint32_t count, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in) {
-  return xmpIntegersExportInternal(handle,out,count,words,order,size,endian,nails,in,false);
+xmpError_t XMPAPI xmpIntegersExport(xmpHandle_t handle, void* out, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in, uint32_t count) {
+  return xmpIntegersExportInternal(handle,out,words,order,size,endian,nails,in,count,false);
 }
 
-xmpError_t XMPAPI xmpIntegersExportAsync(xmpHandle_t handle, void* out, uint32_t count, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in) {
-  return xmpIntegersExportInternal(handle,out,count,words,order,size,endian,nails,in,true);
+xmpError_t XMPAPI xmpIntegersExportAsync(xmpHandle_t handle, void* out, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in, uint32_t count) {
+  return xmpIntegersExportInternal(handle,out,words,order,size,endian,nails,in,count,true);
 }
 
 xmpError_t XMPAPI xmpIntegersSet(xmpHandle_t handle, xmpIntegers_t out, xmpIntegers_t in, uint32_t count) {

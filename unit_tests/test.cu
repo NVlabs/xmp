@@ -117,8 +117,8 @@ TEST(errorTests,nullTests) {
   EXPECT_NE(xmpErrorSuccess,xmpIntegersGetPrecision(handle,x,NULL));
   EXPECT_NE(xmpErrorSuccess,xmpIntegersGetCount(handle,x,NULL));
 
-  EXPECT_NE(xmpErrorSuccess,xmpIntegersImport(handle,x,1,1,1,1,1,0,NULL));
-  EXPECT_NE(xmpErrorSuccess,xmpIntegersExport(handle,NULL,1,NULL,1,1,1,0,x));
+  EXPECT_NE(xmpErrorSuccess,xmpIntegersImport(handle,x,1,1,1,1,0,NULL,1));
+  EXPECT_NE(xmpErrorSuccess,xmpIntegersExport(handle,NULL,NULL,1,1,1,0,x,1));
 
   xmpIntegersDestroy(handle,x);
   xmpHandleDestroy(handle);
@@ -211,7 +211,7 @@ TEST(integerTests,xmpIntegerFormatConversionRoutines) {
     }
   }
   
-  xmpIntegersImport(handle,a,count,limbs,xmpNativeOrder,sizeof(xmpLimb_t),xmpNativeEndian,0,h);
+  xmpIntegersImport(handle,a,limbs,xmpNativeOrder,sizeof(xmpLimb_t),xmpNativeEndian,0,h,count);
 
   EXPECT_EQ(xmpFormatCompact,a->format);
  
@@ -315,258 +315,258 @@ TEST(transferTests,xmpIntegersImportExport) {
   xmpIntegersCreate(handle,&d_a,P,N);
 
   //Copy in and out with same parameters, values should be unchanged
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint32_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,1,sizeof(uint32_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint32_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,-1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint32_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,-1,sizeof(uint32_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint32_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,1,sizeof(uint32_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint32_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,1,sizeof(uint32_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint32_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,-1,sizeof(uint32_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint32_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,-1,sizeof(uint32_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint32_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
 
   //Copy in and out with different orders (words should flip orders)
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint32_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,1,sizeof(uint32_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint32_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x77665544);  EXPECT_EQ(h_b[0*limbs+1],0x33221100);  EXPECT_EQ(h_b[1*limbs+0],0x07060504);  EXPECT_EQ(h_b[1*limbs+1],0x03020100);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,1,sizeof(uint32_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint32_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,1,sizeof(uint32_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint32_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x77665544);  EXPECT_EQ(h_b[0*limbs+1],0x33221100);  EXPECT_EQ(h_b[1*limbs+0],0x07060504);  EXPECT_EQ(h_b[1*limbs+1],0x03020100);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,-1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint32_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,-1,sizeof(uint32_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint32_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x77665544);  EXPECT_EQ(h_b[0*limbs+1],0x33221100);  EXPECT_EQ(h_b[1*limbs+0],0x07060504);  EXPECT_EQ(h_b[1*limbs+1],0x03020100);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,-1,sizeof(uint32_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint32_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,-1,sizeof(uint32_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint32_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x77665544);  EXPECT_EQ(h_b[0*limbs+1],0x33221100);  EXPECT_EQ(h_b[1*limbs+0],0x07060504);  EXPECT_EQ(h_b[1*limbs+1],0x03020100);
 
   //Copy in and out with different endians (bytes in words should flip orders)
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,-1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint32_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,-1,sizeof(uint32_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint32_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x00112233);  EXPECT_EQ(h_b[0*limbs+1],0x44556677);  EXPECT_EQ(h_b[1*limbs+0],0x00010203);  EXPECT_EQ(h_b[1*limbs+1],0x04050607);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,-1,sizeof(uint32_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint32_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,-1,sizeof(uint32_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint32_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x00112233);  EXPECT_EQ(h_b[0*limbs+1],0x44556677);  EXPECT_EQ(h_b[1*limbs+0],0x00010203);  EXPECT_EQ(h_b[1*limbs+1],0x04050607);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint32_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,1,sizeof(uint32_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint32_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x00112233);  EXPECT_EQ(h_b[0*limbs+1],0x44556677);  EXPECT_EQ(h_b[1*limbs+0],0x00010203);  EXPECT_EQ(h_b[1*limbs+1],0x04050607);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,1,sizeof(uint32_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint32_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,1,sizeof(uint32_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint32_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x00112233);  EXPECT_EQ(h_b[0*limbs+1],0x44556677);  EXPECT_EQ(h_b[1*limbs+0],0x00010203);  EXPECT_EQ(h_b[1*limbs+1],0x04050607);
 
 
   //Copy in and out with different endians and different orders (should flip bytes and words)
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,1,sizeof(uint32_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint32_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,1,sizeof(uint32_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint32_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,-1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint32_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,-1,sizeof(uint32_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint32_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,-1,sizeof(uint32_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint32_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,-1,sizeof(uint32_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint32_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs,1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint32_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,1,sizeof(uint32_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint32_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
 
 
   //repeat above tests with 2 byte words
   //Copy in and out with same parameters, values should be unchanged
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,1,sizeof(uint16_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint16_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,1,sizeof(uint16_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint16_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,-1,sizeof(uint16_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint16_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,-1,sizeof(uint16_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint16_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,1,sizeof(uint16_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint16_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,1,sizeof(uint16_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint16_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,-1,sizeof(uint16_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint16_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,-1,sizeof(uint16_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint16_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
 
   //Copy in and out with different orders (words should flip orders)
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,1,sizeof(uint16_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint16_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,1,sizeof(uint16_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint16_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x55447766);  EXPECT_EQ(h_b[0*limbs+1],0x11003322);  EXPECT_EQ(h_b[1*limbs+0],0x05040706);  EXPECT_EQ(h_b[1*limbs+1],0x01000302);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,1,sizeof(uint16_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint16_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,1,sizeof(uint16_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint16_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x55447766);  EXPECT_EQ(h_b[0*limbs+1],0x11003322);  EXPECT_EQ(h_b[1*limbs+0],0x05040706);  EXPECT_EQ(h_b[1*limbs+1],0x01000302);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,-1,sizeof(uint16_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint16_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,-1,sizeof(uint16_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint16_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x55447766);  EXPECT_EQ(h_b[0*limbs+1],0x11003322);  EXPECT_EQ(h_b[1*limbs+0],0x05040706);  EXPECT_EQ(h_b[1*limbs+1],0x01000302);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,-1,sizeof(uint16_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint16_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,-1,sizeof(uint16_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint16_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x55447766);  EXPECT_EQ(h_b[0*limbs+1],0x11003322);  EXPECT_EQ(h_b[1*limbs+0],0x05040706);  EXPECT_EQ(h_b[1*limbs+1],0x01000302);
   
   //Copy in and out with different endians (bytes in words should flip orders)
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,-1,sizeof(uint16_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint16_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,-1,sizeof(uint16_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint16_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x22330011);  EXPECT_EQ(h_b[0*limbs+1],0x66774455);  EXPECT_EQ(h_b[1*limbs+0],0x02030001);  EXPECT_EQ(h_b[1*limbs+1],0x06070405);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,-1,sizeof(uint16_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint16_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,-1,sizeof(uint16_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint16_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x22330011);  EXPECT_EQ(h_b[0*limbs+1],0x66774455);  EXPECT_EQ(h_b[1*limbs+0],0x02030001);  EXPECT_EQ(h_b[1*limbs+1],0x06070405);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,1,sizeof(uint16_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint16_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,1,sizeof(uint16_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint16_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x22330011);  EXPECT_EQ(h_b[0*limbs+1],0x66774455);  EXPECT_EQ(h_b[1*limbs+0],0x02030001);  EXPECT_EQ(h_b[1*limbs+1],0x06070405);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,1,sizeof(uint16_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint16_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,1,sizeof(uint16_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint16_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x22330011);  EXPECT_EQ(h_b[0*limbs+1],0x66774455);  EXPECT_EQ(h_b[1*limbs+0],0x02030001);  EXPECT_EQ(h_b[1*limbs+1],0x06070405);
   
   //Copy in and out with different endians and different orders (should flip bytes and words)
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,1,sizeof(uint16_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint16_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,1,sizeof(uint16_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint16_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,-1,sizeof(uint16_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint16_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,-1,sizeof(uint16_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint16_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,-1,sizeof(uint16_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint16_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,-1,sizeof(uint16_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint16_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*2,1,sizeof(uint16_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint16_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*2,1,sizeof(uint16_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint16_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*2,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
 
   //repeat tests for 1 byte words 
   //Copy in and out with same parameters, values should be unchanged
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,1,sizeof(uint8_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint8_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,1,sizeof(uint8_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint8_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,-1,sizeof(uint8_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint8_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,-1,sizeof(uint8_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint8_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,1,sizeof(uint8_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint8_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,1,sizeof(uint8_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint8_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,-1,sizeof(uint8_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint8_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,-1,sizeof(uint8_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint8_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
 
   //Copy in and out with different orders (words should flip orders)
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,1,sizeof(uint8_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint8_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,1,sizeof(uint8_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint8_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,1,sizeof(uint8_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint8_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,1,sizeof(uint8_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint8_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,-1,sizeof(uint8_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint8_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,-1,sizeof(uint8_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint8_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,-1,sizeof(uint8_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint8_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,-1,sizeof(uint8_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint8_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
 
   //Copy in and out with different endians (order should be unchanged)
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,-1,sizeof(uint8_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint8_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,-1,sizeof(uint8_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint8_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,-1,sizeof(uint8_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint8_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,-1,sizeof(uint8_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint8_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,1,sizeof(uint8_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint8_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,1,sizeof(uint8_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint8_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,1,sizeof(uint8_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint8_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,1,sizeof(uint8_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint8_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x33221100);  EXPECT_EQ(h_b[0*limbs+1],0x77665544);  EXPECT_EQ(h_b[1*limbs+0],0x03020100);  EXPECT_EQ(h_b[1*limbs+1],0x07060504);
   
   //Copy in and out with different endians and different orders (should be the same as just doing order)
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,1,sizeof(uint8_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint8_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,1,sizeof(uint8_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint8_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,-1,sizeof(uint8_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint8_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,-1,sizeof(uint8_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint8_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,-1,sizeof(uint8_t),1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,1,sizeof(uint8_t),-1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,-1,sizeof(uint8_t),1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,1,sizeof(uint8_t),-1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
   
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,N,limbs*4,1,sizeof(uint8_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,N,&olimbs,-1,sizeof(uint8_t),1,0,d_a)); 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs*4,1,sizeof(uint8_t),-1,0,h_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&olimbs,-1,sizeof(uint8_t),1,0,d_a,N)); 
   EXPECT_EQ(limbs*4,olimbs);
   EXPECT_EQ(h_b[0*limbs+0],0x44556677);  EXPECT_EQ(h_b[0*limbs+1],0x00112233);  EXPECT_EQ(h_b[1*limbs+0],0x04050607);  EXPECT_EQ(h_b[1*limbs+1],0x00010203);
 
@@ -587,7 +587,7 @@ TEST(transferTests,xmpIntegersSet) {
   uint32_t *h=(uint32_t*)malloc(limbs*100);
 
   //need to import in order to set the format flag
-  xmpIntegersImport(handle,b,100,limbs,1,sizeof(uint32_t),1,0,h);
+  xmpIntegersImport(handle,b,limbs,1,sizeof(uint32_t),1,0,h,100);
 
   EXPECT_EQ(xmpErrorSuccess,xmpIntegersSet(handle,a,b,100));
 
@@ -606,8 +606,8 @@ TEST(errorTests,xmpImportExportErrors) {
   uint32_t *h=(uint32_t*)malloc(limbs*100);
 
   //copy size too big
-  EXPECT_NE(xmpErrorSuccess,xmpIntegersImport(handle,a,200,limbs,1,sizeof(uint32_t),1,0,h));
-  EXPECT_NE(xmpErrorSuccess,xmpIntegersExport(handle,h,200,NULL,1,sizeof(uint32_t),1,0,a));
+  EXPECT_NE(xmpErrorSuccess,xmpIntegersImport(handle,a,limbs,1,sizeof(uint32_t),1,0,h,200));
+  EXPECT_NE(xmpErrorSuccess,xmpIntegersExport(handle,h,NULL,1,sizeof(uint32_t),1,0,a,200));
 
   free(h);
   xmpIntegersDestroy(handle,a);
@@ -936,14 +936,14 @@ TEST_P(PowmTest,opTests) {
   for(int i=0;i<mN;i++) h_m[i*mlimbs]|=0x1;  //ensure least significant bit is odd.
 
   //import to xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,bN,blimbs,-1,sizeof(uint32_t),-1,0,h_b));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_e,eN,elimbs,-1,sizeof(uint32_t),-1,0,h_e));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_m,mN,mlimbs,-1,sizeof(uint32_t),-1,0,h_m));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,blimbs,-1,sizeof(uint32_t),-1,0,h_b,bN));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_e,elimbs,-1,sizeof(uint32_t),-1,0,h_e,eN));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_m,mlimbs,-1,sizeof(uint32_t),-1,0,h_m,mN));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersPowmAsync(handle,x_c,x_b,x_e,x_m,N));
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,NULL,-1,sizeof(uint32_t),-1,0,x_c));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_c,N));
 
   //import to mpz
   #pragma omp parallel for
@@ -977,7 +977,7 @@ TEST_P(PowmTest,opTests) {
   if(cN==bN && cP==bP) {
     ASSERT_EQ(xmpErrorSuccess,xmpIntegersPowmAsync(handle,x_b,x_b,x_e,x_m,N));
     //export from xmp
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,NULL,-1,sizeof(uint32_t),-1,0,x_b));
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_b,N));
   
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
   
@@ -1047,14 +1047,14 @@ TEST_P(ShfTest,opTests) {
   for(int i=0;i<sN;i++) shift[i]=rand32()%(2*aP-2)-aP+1;
 
   //import to xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,aN,alimbs,-1,sizeof(uint32_t),-1,0,h_a));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersShfAsync(handle,x_c,x_a,shift,sN,N));
  
   uint32_t words;
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,&words,-1,sizeof(uint32_t),-1,0,x_c));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,N));
   
   //import to mpz
   #pragma omp parallel for
@@ -1089,7 +1089,7 @@ TEST_P(ShfTest,opTests) {
   //do in place tests when they make sense
   if(cP==aP && cN==aN) {
     ASSERT_EQ(xmpErrorSuccess,xmpIntegersShfAsync(handle,x_a,x_a,shift,sN,N));
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,&words,-1,sizeof(uint32_t),-1,0,x_a));
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,N));
 
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
 
@@ -1142,14 +1142,14 @@ TEST_P(NotTest,opTests) {
   for(int i=0;i<aN*alimbs;i++) h_a[i]=rand32();
 
   //import to xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,aN,alimbs,-1,sizeof(uint32_t),-1,0,h_a));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersNotAsync(handle,x_c,x_a,N));
  
   uint32_t words;
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,&words,-1,sizeof(uint32_t),-1,0,x_c));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,N));
   
   ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
   
@@ -1165,7 +1165,7 @@ TEST_P(NotTest,opTests) {
 
   if(cN==aN && cP==aP) {
     ASSERT_EQ(xmpErrorSuccess,xmpIntegersNotAsync(handle,x_a,x_a,N));
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,&words,-1,sizeof(uint32_t),-1,0,x_a));
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,N));
   
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
   
@@ -1238,15 +1238,15 @@ TEST_P(genericTwoInOneOutTest,opTests) {
   for(int i=0;i<bN*blimbs;i++) h_b[i]=rand32();
 
   //import to xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,aN,alimbs,-1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,bN,blimbs,-1,sizeof(uint32_t),-1,0,h_b));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,blimbs,-1,sizeof(uint32_t),-1,0,h_b,bN));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xfunc(handle,x_c,x_a,x_b,N));
  
   uint32_t words;
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,&words,-1,sizeof(uint32_t),-1,0,x_c));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,N));
   
   ASSERT_LE(words,climbs);
   
@@ -1286,7 +1286,7 @@ TEST_P(genericTwoInOneOutTest,opTests) {
     ASSERT_EQ(xmpErrorSuccess,xfunc(handle,x_a,x_a,x_b,N));
  
     //export from xmp
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,&words,-1,sizeof(uint32_t),-1,0,x_a));
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,N));
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
   
     //compare results
@@ -1369,15 +1369,15 @@ TEST_P(genericTwoInTwoOutTest,opTests) {
   for(int i=0;i<bN*blimbs;i++) h_b[i]=rand32();
 
   //import to xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,aN,alimbs,-1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,bN,blimbs,-1,sizeof(uint32_t),-1,0,h_b));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,blimbs,-1,sizeof(uint32_t),-1,0,h_b,bN));
   
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xfunc(handle,x_c,x_d,x_a,x_b,N));
   
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_resc,N,NULL,-1,sizeof(uint32_t),-1,0,x_c));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_resd,N,NULL,-1,sizeof(uint32_t),-1,0,x_d));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_resc,NULL,-1,sizeof(uint32_t),-1,0,x_c,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_resd,NULL,-1,sizeof(uint32_t),-1,0,x_d,N));
   
   //import to mpz
   #pragma omp parallel for
@@ -1475,8 +1475,8 @@ TEST_P(CmpTest,opTests) {
   for(int i=0;i<bN*blimbs;i++) h_b[i]=rand32();
 
   //import to xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,aN,alimbs,-1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,bN,blimbs,-1,sizeof(uint32_t),-1,0,h_b));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,blimbs,-1,sizeof(uint32_t),-1,0,h_b,bN));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCmpAsync(handle,d_res,x_a,x_b,N));
@@ -1553,7 +1553,7 @@ TEST_P(PopcTest,opTests) {
   for(int i=0;i<aN*alimbs;i++) h_a[i]=rand32();
 
   //import to xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,aN,alimbs,-1,sizeof(uint32_t),-1,0,h_a));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersPopcAsync(handle,d_res,x_a,N));
@@ -1636,14 +1636,14 @@ TEST_P(SubTest,opTests) {
   for(int i=0;i<bN*blimbs;i++) h_b[i]=rand32();
 
   //import to xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,aN,alimbs,-1,sizeof(uint32_t),-1,0,h_a));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,bN,blimbs,-1,sizeof(uint32_t),-1,0,h_b));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,blimbs,-1,sizeof(uint32_t),-1,0,h_b,bN));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersSubAsync(handle,x_c,x_a,x_b,N));
  
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,NULL,-1,sizeof(uint32_t),-1,0,x_c));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_c,N));
   
   //import to mpz
   #pragma omp parallel for
@@ -1683,7 +1683,7 @@ TEST_P(SubTest,opTests) {
     ASSERT_EQ(xmpErrorSuccess,xmpIntegersSubAsync(handle,x_a,x_a,x_b,N));
  
     //export from xmp
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,N,NULL,-1,sizeof(uint32_t),-1,0,x_a));
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_a,N));
   
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
     //compare results

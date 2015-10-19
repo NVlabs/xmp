@@ -78,15 +78,15 @@ int main() {
   m[0]|=1;
 
   //import 
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,base,N,limbs,-1,sizeof(uint32_t),0,0,b));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,exp,1,limbs,-1,sizeof(uint32_t),0,0,b));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,mod,1,limbs,-1,sizeof(uint32_t),0,0,b));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,base,limbs,-1,sizeof(uint32_t),0,0,b,N));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,exp,limbs,-1,sizeof(uint32_t),0,0,b,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,mod,limbs,-1,sizeof(uint32_t),0,0,b,1));
 
   //call powm
   XMP_CHECK_ERROR(xmpIntegersPowm(handle,out,base,exp,mod,N));
  
   //export
-  XMP_CHECK_ERROR(xmpIntegersExport(handle,o,N,&limbs,-1,sizeof(uint32_t),0,0,out));
+  XMP_CHECK_ERROR(xmpIntegersExport(handle,o,&limbs,-1,sizeof(uint32_t),0,0,out,N));
   
   //use results here
 

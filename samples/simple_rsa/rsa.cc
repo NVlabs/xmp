@@ -135,10 +135,10 @@ int main() {
   }
 
   //import into xmp
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,n,1,limbs,-1,sizeof(uint32_t),0,0,h_n));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,e,1,1,-1,sizeof(uint32_t),0,0,h_e));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,d,1,limbs,-1,sizeof(uint32_t),0,0,h_d));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,m,count,limbs,-1,sizeof(uint32_t),0,0,h_m));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,n,limbs,-1,sizeof(uint32_t),0,0,h_n,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,e,1,-1,sizeof(uint32_t),0,0,h_e,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,d,limbs,-1,sizeof(uint32_t),0,0,h_d,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,m,limbs,-1,sizeof(uint32_t),0,0,h_m,count));
 
   //encrypt using Pure RSA  (warning without proper padding this is insecure)
   //c=m ^ e mod n

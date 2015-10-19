@@ -183,16 +183,16 @@ int main() {
   }
 
   //import into xmp
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,n,1,limbs,-1,sizeof(uint32_t),0,0,h_n));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,e,1,1,-1,sizeof(uint32_t),0,0,h_e));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,p,1,hlimbs,-1,sizeof(uint32_t),0,0,h_p));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,q,1,hlimbs,-1,sizeof(uint32_t),0,0,h_q));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,m,count,limbs,-1,sizeof(uint32_t),0,0,h_m));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,n,limbs,-1,sizeof(uint32_t),0,0,h_n,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,e,1,-1,sizeof(uint32_t),0,0,h_e,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,p,hlimbs,-1,sizeof(uint32_t),0,0,h_p,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,q,hlimbs,-1,sizeof(uint32_t),0,0,h_q,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,m,limbs,-1,sizeof(uint32_t),0,0,h_m,count));
 
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,dp,1,hlimbs,-1,sizeof(uint32_t),0,0,h_dp));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,dq,1,hlimbs,-1,sizeof(uint32_t),0,0,h_dq));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,cp,1,limbs,-1,sizeof(uint32_t),0,0,h_cp));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,cq,1,limbs,-1,sizeof(uint32_t),0,0,h_cq));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,dp,hlimbs,-1,sizeof(uint32_t),0,0,h_dp,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,dq,hlimbs,-1,sizeof(uint32_t),0,0,h_dq,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,cp,limbs,-1,sizeof(uint32_t),0,0,h_cp,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,cq,limbs,-1,sizeof(uint32_t),0,0,h_cq,1));
 
   //encrypt using Pure RSA  (warning without proper padding this is insecure)
   //c=m ^ e mod n

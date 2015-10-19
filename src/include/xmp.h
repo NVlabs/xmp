@@ -124,11 +124,11 @@ xmpError_t XMPAPI xmpIntegersGetPrecision(xmpHandle_t handle, xmpIntegers_t x, u
 xmpError_t XMPAPI xmpIntegersGetCount(xmpHandle_t handle, xmpIntegers_t x, uint32_t *count);
 
 //import integers from in into out
-xmpError_t XMPAPI xmpIntegersImport(xmpHandle_t handle, xmpIntegers_t out, uint32_t count, uint32_t words, int32_t order, size_t size, int32_t endian, uint32_t nails, void* in);
-xmpError_t XMPAPI xmpIntegersImportAsync(xmpHandle_t handle, xmpIntegers_t out, uint32_t count, uint32_t words, int32_t order, size_t size, int32_t endian, uint32_t nails, void* in);
+xmpError_t XMPAPI xmpIntegersImport(xmpHandle_t handle, xmpIntegers_t out, uint32_t words, int32_t order, size_t size, int32_t endian, uint32_t nails, void* in, uint32_t count);
+xmpError_t XMPAPI xmpIntegersImportAsync(xmpHandle_t handle, xmpIntegers_t out, uint32_t words, int32_t order, size_t size, int32_t endian, uint32_t nails, void* in, uint32_t count);
 //export integers from in into out
-xmpError_t XMPAPI xmpIntegersExport(xmpHandle_t handle, void* out, uint32_t count, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in);
-xmpError_t XMPAPI xmpIntegersExportAsync(xmpHandle_t handle, void* out, uint32_t count, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in);
+xmpError_t XMPAPI xmpIntegersExport(xmpHandle_t handle, void* out, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in, uint32_t count);
+xmpError_t XMPAPI xmpIntegersExportAsync(xmpHandle_t handle, void* out, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in, uint32_t count);
 //copy count integers of size bytes from in into out
 xmpError_t XMPAPI xmpIntegersSet(xmpHandle_t handle, xmpIntegers_t out, xmpIntegers_t in, uint32_t count);
 xmpError_t XMPAPI xmpIntegersSetAsync(xmpHandle_t handle, xmpIntegers_t out, xmpIntegers_t in, uint32_t count);

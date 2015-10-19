@@ -104,9 +104,9 @@ double run_gpu_performance_test(const vector<int> &devices, uint32_t iterations,
     XMP_CHECK_ERROR(xmpIntegersCreate(handle,&x_e,bits,eN));
     XMP_CHECK_ERROR(xmpIntegersCreate(handle,&x_m,bits,mN));
 
-    XMP_CHECK_ERROR(xmpIntegersImport(handle,x_b,bN,limbs,-1,sizeof(uint32_t),0,0,b));
-    XMP_CHECK_ERROR(xmpIntegersImport(handle,x_e,eN,limbs,-1,sizeof(uint32_t),0,0,e));
-    XMP_CHECK_ERROR(xmpIntegersImport(handle,x_m,mN,limbs,-1,sizeof(uint32_t),0,0,m));
+    XMP_CHECK_ERROR(xmpIntegersImport(handle,x_b,limbs,-1,sizeof(uint32_t),0,0,b,bN));
+    XMP_CHECK_ERROR(xmpIntegersImport(handle,x_e,limbs,-1,sizeof(uint32_t),0,0,e,eN));
+    XMP_CHECK_ERROR(xmpIntegersImport(handle,x_m,limbs,-1,sizeof(uint32_t),0,0,m,mN));
 
     //warmp up
     XMP_CHECK_ERROR(xmpIntegersPowm(handle,x_c,x_b,x_e,x_m,N));

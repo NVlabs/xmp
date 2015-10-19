@@ -133,10 +133,10 @@ int main() {
   h_p[0]|=0x1;
 
   //import into xmp
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,p,1,limbs,-1,sizeof(uint32_t),0,0,h_p));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,g,1,limbs,-1,sizeof(uint32_t),0,0,h_g));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,a,1,limbs,-1,sizeof(uint32_t),0,0,h_a));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,b,1,limbs,-1,sizeof(uint32_t),0,0,h_b));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,p,limbs,-1,sizeof(uint32_t),0,0,h_p,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,g,limbs,-1,sizeof(uint32_t),0,0,h_g,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,a,limbs,-1,sizeof(uint32_t),0,0,h_a,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,b,limbs,-1,sizeof(uint32_t),0,0,h_b,1));
 
   start=wallclock();
   //compute both sides here.  Normally you would only do half of this
