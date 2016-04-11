@@ -79,8 +79,8 @@ int main() {
 
   //import 
   XMP_CHECK_ERROR(xmpIntegersImport(handle,base,limbs,-1,sizeof(uint32_t),0,0,b,N));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,exp,limbs,-1,sizeof(uint32_t),0,0,b,1));
-  XMP_CHECK_ERROR(xmpIntegersImport(handle,mod,limbs,-1,sizeof(uint32_t),0,0,b,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,exp,limbs,-1,sizeof(uint32_t),0,0,e,1));
+  XMP_CHECK_ERROR(xmpIntegersImport(handle,mod,limbs,-1,sizeof(uint32_t),0,0,m,1));
 
   //call powm
   XMP_CHECK_ERROR(xmpIntegersPowm(handle,out,base,exp,mod,N));
