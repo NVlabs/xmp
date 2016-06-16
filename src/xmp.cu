@@ -59,6 +59,8 @@ xmpError_t XMPAPI xmpHandleCreateWithMemoryFunctions(xmpHandle_t *handle,xmpAllo
   (*handle)->da=da;
   (*handle)->df=df;
 
+  
+
   if(cudaSuccess!=cudaGetDevice(&((*handle)->device)))
     return xmpErrorInvalidDevice;
 
@@ -280,12 +282,28 @@ void printWordsStrided(xmpLimb_t* data, int limbs, int stride, int count) {
   cudaDeviceSynchronize();
 }
 
+__global__ void printWordsCompact_kernel(xmpLimb_t* data, int limbs, int count) {
+  for(int i=0;i<count;i++) {
+    printf("i=%d\n    ",i);
+    for(int j=limbs-1;j>=0;j--) {
+      printf("%08x",data[i*limbs+j]);
+    }
+    printf("\n");
+  }
+}
+
+void printWordsCompact(xmpLimb_t* data, int limbs, int count) {
+  printWordsCompact_kernel<<<1,1>>>(data,limbs,count);
+  cudaDeviceSynchronize();
+}
+
+
 
 //transforms an array of data.  Can reverse the order, endian, and zero out the top nails bits of each word.
 template<class word_t>
 __global__ void xmpTransform(word_t *output, word_t *input, uint32_t count, uint32_t words, int32_t order, int32_t endian, uint32_t nails) {
   for(uint32_t i=blockIdx.y*blockDim.y+threadIdx.y;i<count;i+=blockDim.y*gridDim.y) {
-    for(uint32_t j=blockIdx.x*blockDim.x+threadIdx.x;i<words;i+=blockDim.x*gridDim.x) {
+    for(uint32_t j=blockIdx.x*blockDim.x+threadIdx.x;j<words;j+=blockDim.x*gridDim.x) {
       
       //Read in the order we want to store
       uint32_t offset= (order==xmpNativeOrder) ? j : words-j-1;
@@ -368,7 +386,7 @@ xmpError_t inline xmpIntegersImportInternal(xmpHandle_t handle, xmpIntegers_t ou
     threads.y=DIV_ROUND_UP(128,threads.x);  //block size = ~128 threads
     blocks.x=DIV_ROUND_UP(words,threads.x);
     blocks.y=DIV_ROUND_UP(count,threads.y);
-  
+ 
     //unpack from temporary memory
     switch(size) {
       case 1:
@@ -475,7 +493,7 @@ xmpError_t inline xmpIntegersExportInternal(xmpHandle_t handle, void* out, uint3
       default:
         return xmpErrorInvalidParameter;
     };
-    
+   
     if(attrib.memoryType==cudaMemoryTypeHost) {
       //copy up from temporary memory
       if(cudaSuccess!=cudaMemcpyAsync(out,dst,bytes,cudaMemcpyDefault,handle->stream))
