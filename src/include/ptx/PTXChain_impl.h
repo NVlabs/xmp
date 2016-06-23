@@ -1,31 +1,35 @@
 /***
 Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a 
-copy of this software and associated documentation files (the "Software"), 
-to deal in the Software without restriction, including without limitation 
-the rights to use, copy, modify, merge, publish, distribute, sublicense, 
-and/or sell copies of the Software, and to permit persons to whom the 
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in 
+The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ***/
 namespace xmp {
   __device__ __forceinline__ PTXChain::PTXChain() {
+    _predicate=0;
+    _set=true;
     _size=-1;
     _position=-1;
   }
 
   __device__ __forceinline__ PTXChain::PTXChain(int32_t size) {
+    _predicate=0;
+    _set=true;
     _size=size;
     _position=0;
     _carryIn=false;
@@ -33,6 +37,33 @@ namespace xmp {
   }
 
   __device__ __forceinline__ PTXChain::PTXChain(int32_t size, bool carryIn, bool carryOut) {
+    _predicate=0;
+    _set=true;
+    _size=size;
+    _position=0;
+    _carryIn=carryIn;
+    _carryOut=carryOut;
+  }
+
+  __device__ __forceinline__ PTXChain::PTXChain(PTXInliner inliner) {
+    _predicate=inliner._predicate;
+    _set=inliner._set;
+    _size=-1;
+    _position=-1;
+  }
+
+  __device__ __forceinline__ PTXChain::PTXChain(PTXInliner inliner, int32_t size) {
+    _predicate=inliner._predicate;
+    _set=inliner._set;
+    _size=size;
+    _position=0;
+    _carryIn=false;
+    _carryOut=false;
+  }
+
+  __device__ __forceinline__ PTXChain::PTXChain(PTXInliner inliner, int32_t size, bool carryIn, bool carryOut) {
+    _predicate=inliner._predicate;
+    _set=inliner._set;
     _size=size;
     _position=0;
     _carryIn=carryIn;

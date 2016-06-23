@@ -24,6 +24,7 @@ IN THE SOFTWARE.
 
 #include "three_n.h"
 #include "digitized.h"
+#include "warp_distributed.h"
 
 #define RMP_STATE_SQUARE            0x01000000
 #define RMP_STATE_WINDOW_MULTIPLY   0x00800000
@@ -34,15 +35,14 @@ IN THE SOFTWARE.
 #define RMP_STATE_EVENS             0x000E0000
 #define RMP_STATE_START             0x000D0000
 
-
 namespace xmp {
   template <class Model>
   __device__ __forceinline__ void fwe(uint32_t *out_data, int32_t out_len, int32_t out_stride,
                                       uint32_t *exp_data, int32_t exp_stride,
-                                      int32_t  mod_count,
+                                      int32_t   mod_count,
                                       uint32_t *window,
-                                      int32_t size, int32_t bits, int32_t window_bits) {
-    Model    model(size, bits, window_bits);
+                                      int32_t   size, int32_t width, int32_t bits, int32_t window_bits) {
+    Model    model(size, width, bits, window_bits);
     int      index;
     uint32_t state;
 
@@ -59,7 +59,7 @@ namespace xmp {
     // This state machine is intricate, be careful with changes.
 
     while(true) {
-//      if(B0T0) { printf("state=%08X ", state); model.printCurrent(context, "current"); }
+      // if(blockIdx.x==0 && threadIdx.x>=32 && threadIdx.x<40) { printf("state=%08X ", state); model.printCurrent(window, "current"); }
       if(state>=RMP_STATE_SQUARE) {
         model.squareCurrent(window);
         state=state + 0x01000000;

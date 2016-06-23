@@ -1,22 +1,22 @@
 /***
 Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a 
-copy of this software and associated documentation files (the "Software"), 
-to deal in the Software without restriction, including without limitation 
-the rights to use, copy, modify, merge, publish, distribute, sublicense, 
-and/or sell copies of the Software, and to permit persons to whom the 
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in 
+The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ***/
 #pragma once
@@ -30,7 +30,16 @@ IN THE SOFTWARE.
 namespace xmp {
   class PTXInliner {
     public:
+      uint32_t _predicate;
+      bool     _set;
+
       __device__ PTXInliner();
+      __device__ PTXInliner(uint32_t predicate, bool set);
+
+      __device__ PTXInliner pnot();
+      __device__ void       nestStart();
+      __device__ void       nestEnd();
+      __device__ void       declarePredicate();
 
       // These are just covers over asm inlines.  The main reason to use them is that they make
       // the math code more concise and easier to read.
@@ -93,23 +102,35 @@ namespace xmp {
       __device__ void XMADHHC(uint32_t& r, uint32_t a, uint32_t& b, uint32_t& c);
       __device__ void XMADHHC_CC(uint32_t& r, uint32_t a, uint32_t& b, uint32_t& c);
 
+      // setp operations
+      __device__ void SETP_EQ(uint32_t& a, uint32_t& b);
+      __device__ void SETP_NE(uint32_t& a, uint32_t& b);
+      __device__ void SELP(uint32_t& r, uint32_t& a, uint32_t& b);
 
       // misc inlines
       __device__ void PERMUTE(uint32_t& r, uint32_t& a, uint32_t& b, uint32_t& c);
+      __device__ void BFE(uint32_t& r, uint32_t& a, uint32_t& start, uint32_t& len);
+      __device__ void BFE_S(uint32_t& r, uint32_t& a, uint32_t& start, uint32_t& len);
       __device__ void SHF_L_WRAP(uint32_t& r, uint32_t& a, uint32_t& b, uint32_t& c);
       __device__ void SHF_R_WRAP(uint32_t& r, uint32_t& a, uint32_t& b, uint32_t& c);
   };
 
   class PTXChain {
     public:
-      int32_t _size;
-      int32_t _position;
-      bool    _carryIn;
-      bool    _carryOut;
+      uint32_t _predicate;
+      bool     _set;
+      int32_t  _size;
+      int32_t  _position;
+      bool     _carryIn;
+      bool     _carryOut;
 
       __device__ PTXChain();
       __device__ PTXChain(int32_t size);
       __device__ PTXChain(int32_t size, bool carryIn, bool carryOut);
+
+      __device__ PTXChain(PTXInliner inliner);
+      __device__ PTXChain(PTXInliner inliner, int32_t size);
+      __device__ PTXChain(PTXInliner inliner, int32_t size, bool carryIn, bool carryOut);
 
       __device__ void start(int32_t size);
       __device__ void start(int32_t size, bool carryIn, bool carryOut);

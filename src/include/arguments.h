@@ -91,6 +91,7 @@ struct ar_arguments {
   int32_t    mod_len;
   int32_t    mod_stride;
   int32_t    mod_count;
+  int32_t    width;      // number of threads per group, used in warp distributed
 };
 
 struct powm_arguments {
@@ -103,6 +104,7 @@ struct powm_arguments {
   int32_t    exp_count;
   int32_t    mod_count;   // specifying a non-zero mod_count means to cache the modulus in shared mem
   int32_t    digits;
+  int32_t    width;       // number of threads per group used in warp distributed
   int32_t    bits;
   int32_t    window_bits;
 };
