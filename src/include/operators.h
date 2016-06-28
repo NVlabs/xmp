@@ -888,6 +888,7 @@ xmpError_t XMPAPI xmpIntegersDivModAsync(xmpHandle_t handle, xmpIntegers_t q, xm
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
 }
+
 //computes out=base^exp % mod for count integers
 xmpError_t XMPAPI xmpIntegersPowm(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t count) {
   xmpError_t error=xmpIntegersPowmAsync(handle,out,a,exp,mod,count);
@@ -898,9 +899,10 @@ xmpError_t XMPAPI xmpIntegersPowm(xmpHandle_t handle, xmpIntegers_t out, const x
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
 }
+
 xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t count) {
   int              device=handle->device;
-  int              bits, windowBits;
+  int              bits, windowBits, words, width, add;
   size_t           windowBytes;
   xmpError_t       error;
   ar_arguments_t   ar_arguments;
@@ -940,17 +942,66 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   else
     windowBits=8;
 
+  // heuristic for picking crossovers
+  words=0;
+  width=0;
+
+  if(handle->arch>=30) {
+    // MAXWELL heuristic
+    if((out->precision==1024 || count<handle->smCount*768) && out->precision<=1024) {
+      if(precision<=128) {
+        words=1;
+        width=4;
+      }
+      else if(precision<=256) {
+        words=1;
+        width=8;
+      }
+      else if(precision<=384) {
+        words=3;
+        width=4;
+      }
+      else if(precision<=512) {
+        words=1;
+        width=16;
+      }
+      else if(precision<=768) {
+        words=3;
+        width=8;
+      }
+      else if(precision<=1024) {
+        if(count<handle->smCount*32) {
+          words=1;
+          width=32;
+        }
+        else if(count<handle->smCount*64) {
+          words=2;
+          width=16;
+        }
+        else if(count<handle->smCount*576) {
+          words=4;
+          width=8;
+        }
+        else {
+          words=8;
+          width=4;
+        }
+      }
+    }
+  }
+
   // modBytes and windowBytes size must match _words
+  add=(words==0)?4:1;
   if(precision<=128)
-    windowBytes=((1<<windowBits)+4)*4*4;
+    windowBytes=((1<<windowBits)+add)*4*4;
   else if(precision<=256)
-    windowBytes=((1<<windowBits)+4)*8*4;
+    windowBytes=((1<<windowBits)+add)*8*4;
   else if(precision<=384)
-    windowBytes=((1<<windowBits)+4)*12*4;
+    windowBytes=((1<<windowBits)+add)*12*4;
   else if(precision<=512)
-    windowBytes=((1<<windowBits)+4)*16*4;
+    windowBytes=((1<<windowBits)+add)*16*4;
   else
-    windowBytes=((1<<windowBits)+4)*ROUND_UP(DIV_ROUND_UP(precision, 32), DIGIT)*4;
+    windowBytes=((1<<windowBits)+add)*ROUND_UP(DIV_ROUND_UP(precision, 32), DIGIT)*4;
 
   windowBytes*=ROUND_UP(count, GEOMETRY);
 
@@ -977,30 +1028,72 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   ar_arguments.mod_indices=policy->indices[3];
   ar_arguments.a_indices_count=policy->indices_count[1];
   ar_arguments.mod_indices_count=policy->indices_count[3];
+  ar_arguments.width=width;
 
-  if(precision<=128) {
+  if(precision<=128 && words==0) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 4>);
     regmp_ar_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
   }
-  else if(precision<=256) {
+  else if(precision<=256 && words==0) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 8>);
     regmp_ar_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
   }
-  else if(precision<=384) {
+  else if(precision<=384 && words==0) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 12>);
     regmp_ar_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
   }
-  else if(precision<=512) {
+  else if(precision<=512 && words==0) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 16>);
     regmp_ar_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+  }
+  else if(precision<=128 && words!=0) {
+    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 4>);
+    warpmp_small_ar_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+  }
+  else if(precision<=256 && words!=0) {
+    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 8>);
+    warpmp_small_ar_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+  }
+  else if(precision<=384 && words!=0) {
+    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 12>);
+    warpmp_small_ar_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+  }
+  else if(precision<=512 && words!=0) {
+    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 16>);
+    warpmp_small_ar_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+  }
+  else if(precision<=768 && words!=0) {
+    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 24>);
+    warpmp_small_ar_kernel<GSL, 24><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+  }
+  else if(precision<=1024 && words!=0) {
+    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 32>);
+    warpmp_small_ar_kernel<GSL, 32><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+  }
+  else if(words!=0) {
+    // FIX FIX FIX
+    // need a warpmp_large_ar_kernel that uses digitized AR
+    return xmpErrorUnsupported;
   }
   else {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
@@ -1009,8 +1102,13 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
     digitmp_ar_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
   }
 
+
   // package up the arguments
-  powm_arguments.out_data=out->slimbs;
+  if(words==0)
+    powm_arguments.out_data=out->slimbs;
+  else
+    powm_arguments.out_data=out->climbs;
+
   powm_arguments.out_len=DIV_ROUND_UP(precision, 32);
   powm_arguments.out_stride=out->stride;
   powm_arguments.exp_data=exp->slimbs;
@@ -1019,6 +1117,7 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   powm_arguments.mod_count=0;
   powm_arguments.window_data=(xmpLimb_t *)handle->scratch;
   powm_arguments.digits=DIV_ROUND_UP(precision, DIGIT*32);
+  powm_arguments.width=width;
   powm_arguments.bits=exp->precision;
   powm_arguments.window_bits=windowBits;
   powm_arguments.out_indices=policy->indices[0];
@@ -1027,35 +1126,73 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
 
   //if out is indexed and in-place we need to work in scratch memory
   bool inplace=(out==exp);
-  size_t out_size=out->stride*out->nlimbs*sizeof(xmpLimb_t);
+  size_t out_size_strided=out->stride*out->nlimbs*sizeof(xmpLimb_t);
+  size_t out_size_compact=out->count*out->nlimbs*sizeof(xmpLimb_t);
 
   if(inplace) {
     xmpError_t error;
-    error=xmpSetNecessaryScratchSize(handle, windowBytes+out_size);
+    error=xmpSetNecessaryScratchSize(handle, windowBytes+out_size_strided);
     if(error!=xmpErrorSuccess)
       return error;
     powm_arguments.out_data=(xmpLimb_t*)(reinterpret_cast<char*>(handle->scratch)+windowBytes);
   }
 
-  if(precision<=128) {
+  if(words==1) {
+    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 1>);
+    warpmp_powm_kernel<GSL, 1><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+  }
+  else if(words==2) {
+    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 2>);
+    warpmp_powm_kernel<GSL, 2><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+  }
+  else if(words==3) {
+    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 3>);
+    warpmp_powm_kernel<GSL, 3><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+  }
+  else if(words==4) {
+    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 4>);
+    warpmp_powm_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+  }
+  else if(words==6) {
+    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 6>);
+    warpmp_powm_kernel<GSL, 6><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+  }
+  else if(words==8) {
+    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 8>);
+    warpmp_powm_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+  }
+  else
+  if(precision<=128 && words==0) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 4, 0, 0>);
     regmp_powm_kernel<GSL, 4, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
   }
-  else if(precision<=256) {
+  else if(precision<=256 && words==0) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 8, 0, 0>);
     regmp_powm_kernel<GSL, 8, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
   }
-  else if(precision<=384) {
+  else if(precision<=384 && words==0) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 12, 0, 0>);
     regmp_powm_kernel<GSL, 12, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
   }
-  else if(precision<=512) {
+  else if(precision<=512 && words==0) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 16, 0, 0>);
@@ -1072,17 +1209,24 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
     digitmp_powm_kernel<true, GSL, DIGIT><<<blocks, threads, shared_mem, handle->stream>>>(powm_arguments, count);
   }
   else {
-    dim3    blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, digitmp_powm_kernel<false, GSL, DIGIT>);
     digitmp_powm_kernel<false, GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
   }
 
-  if(inplace) {
-    cudaMemcpyAsync(out->slimbs,powm_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
+  if(words==0) {
+    out->setFormat(xmpFormatStrided);
+    if(inplace) {
+      cudaMemcpyAsync(out->slimbs,powm_arguments.out_data,out_size_strided,cudaMemcpyDeviceToDevice,handle->stream);
+    }
   }
-
-  out->setFormat(xmpFormatStrided);
+  else {
+    out->setFormat(xmpFormatCompact);
+    if(inplace) {
+      cudaMemcpyAsync(out->climbs,powm_arguments.out_data,out_size_compact,cudaMemcpyDeviceToDevice,handle->stream);
+    }
+  }
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
 }

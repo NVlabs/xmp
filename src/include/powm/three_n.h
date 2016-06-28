@@ -29,7 +29,7 @@ namespace xmp {
       uint32_t _np0;
       uint32_t _registers[_words*3];
 
-      __device__ __forceinline__ ThreeN_n(int32_t words, int32_t bits, int32_t window_bits) {
+      __device__ __forceinline__ ThreeN_n(int32_t words, int32_t width, int32_t bits, int32_t window_bits) {
       }
 
       __device__ __forceinline__ void initialize(uint32_t *window_data, int32_t mod_count) {

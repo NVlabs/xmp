@@ -33,6 +33,17 @@ typedef uint32_t xmpLimb_t;
 #define MIN(a,b) (((a)<(b)) ? (a) : (b))
 #define MAX(a,b) (((a)<(b)) ? (b) : (a))
 
+//Internal use only, this should not be called in any code as it will exit on a failure instead of returning an error code.
+#define cudaCheckError() {                                          \
+        cudaDeviceSynchronize(); \
+        cudaError_t e=cudaGetLastError();                                 \
+        if(e!=cudaSuccess) {                                              \
+            printf("Cuda failure %s:%d: '%s'\n",__FILE__,__LINE__,cudaGetErrorString(e));           \
+            exit(EXIT_FAILURE);                                           \
+        }                                                                 \
+    }
+
+
 #define XMP_CHECK_NE(p,q) \
   if((p)==(q)) return xmpErrorInvalidParameter;
 

@@ -28,7 +28,7 @@ namespace xmp {
       uint32_t _registers[size*4+1];
       uint32_t _window_size;
 
-      __device__ __forceinline__ Digitized(int32_t digits, int32_t bits, int32_t window_bits) {
+      __device__ __forceinline__ Digitized(int32_t digits, int32_t width, int32_t bits, int32_t window_bits) {
         _digits=digits;
         _window_size=1<<window_bits;
       }

@@ -330,47 +330,6 @@ xmpError_t XMPAPI xmpIntegersGetCount(xmpHandle_t handle, xmpIntegers_t x, uint3
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
 }
-#if 0
-//TODO delete these
-//set the dynamic array indices,  NULL = clear indices array
-xmpError_t XMPAPI xmpIntegersSetIndicesAsync(xmpHandle_t handle, xmpIntegers_t a, uint32_t *indices, uint32_t count) {
-
-  //if the parameter is null clear existing indices
-  if(indices==NULL) {
-    if(NULL!=a->indices) {
-      handle->df(a->indices);
-      a->indices=NULL;
-    }
-  } else {
-    //if already allocated but a different size
-    if(a->indices!=NULL && count!=a->indices_count) {
-      //free old indices
-      handle->df(a->indices);
-      a->indices=NULL;
-    }
-
-    //if not allocated
-    if(a->indices==NULL) {
-      //allocate new indices
-      a->indices=(uint32_t*)handle->da(sizeof(uint32_t)*count);
-      a->indices_count=count;
-      if(a->indices==NULL)  
-        return xmpErrorInvalidCudaMalloc;
-    }
-
-    cudaMemcpyAsync(a->indices,indices,sizeof(uint32_t)*count,cudaMemcpyDefault,handle->stream);
-  }
-
-  a->indices_count=count;
-  return xmpErrorSuccess;
-}
-
-xmpError_t XMPAPI xmpIntegersSetIndices(xmpHandle_t handle, xmpIntegers_t a, uint32_t *indices, uint32_t count) {
-  xmpError_t error=xmpIntegersSetIndicesAsync(handle,a,indices,count);
-  cudaStreamSynchronize(handle->stream);
-  return error;
-}
-#endif
 
 int32_t query_endianess() {
   int32_t num=1;
