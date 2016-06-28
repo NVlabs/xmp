@@ -129,7 +129,7 @@ namespace xmp {
       __device__ __forceinline__ DigitMP(bool compact, bool useTextureCache, uint32_t *base, int32_t digits, int32_t thread=-1) {
         if(thread<0)
           thread=blockIdx.x*blockDim.x+threadIdx.x;
-
+        
         if(compact) {
           if(useTextureCache) {
             if(_size%4!=0)
@@ -169,7 +169,7 @@ namespace xmp {
 
         if(thread<0)
           thread=threadIdx.x;
-
+        
         if(_size%8==0) {       // use chunks of 8 words
           _storage=xmpDigitStorage_shared_chunked_internal_v2;
           _base=base + thread%count*8;

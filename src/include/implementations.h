@@ -43,28 +43,38 @@ __global__ void regmp_add_kernel(add_arguments_t add_arguments, int32_t count) {
   int32_t     b_len=add_arguments.b_len;
   int32_t     b_stride=add_arguments.b_stride;
   int32_t     b_count=add_arguments.b_count;
+  uint32_t   *a_indices=add_arguments.a_indices;
+  uint32_t   *b_indices=add_arguments.b_indices;
+  uint32_t   *out_indices=add_arguments.out_indices;
+  uint32_t    a_indices_count=add_arguments.a_indices_count;
+  uint32_t    b_indices_count=add_arguments.b_indices_count;
 
   PTXInliner  inliner;
   xmpLimb_t   registers[2*size];
   RegMP       A(registers, 0, 0, size), B(registers, 0, size, size);
   xmpLimb_t  *data;
   xmpLimb_t   carry, zero=0;
-
+  
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    data=a_data + thread%a_count;
+    int aindex=thread, bindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+      
+    data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
-      if(index<a_len)
+      if(index<a_len) 
         A[index]=data[index*a_stride];
       else
         A[index]=0;
     }
 
-    data=b_data + thread%b_count;
+    data=b_data + bindex%b_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
-      if(index<b_len)
+      if(index<b_len) 
         B[index]=data[index*b_stride];
       else
         B[index]=0;
@@ -73,7 +83,7 @@ __global__ void regmp_add_kernel(add_arguments_t add_arguments, int32_t count) {
     _add(A, A, B, false, true);       // addition with carry out set
     inliner.ADDC(carry, zero, zero);  // grab the carry flag
 
-    data=s_data + thread;
+    data=s_data + outindex;
     #pragma unroll
     for(int index=0;index<size;index++)
       if(index<s_len)
@@ -104,13 +114,23 @@ __global__ void digitmp_add_kernel(add_arguments_t add_arguments, int32_t count)
   int32_t    b_len=add_arguments.b_len;
   int32_t    b_stride=add_arguments.b_stride;
   int32_t    b_count=add_arguments.b_count;
+  uint32_t   *a_indices=add_arguments.a_indices;
+  uint32_t   *b_indices=add_arguments.b_indices;
+  uint32_t   *out_indices=add_arguments.out_indices;
+  uint32_t    a_indices_count=add_arguments.a_indices_count;
+  uint32_t    b_indices_count=add_arguments.b_indices_count;
 
   xmpLimb_t  registers[2*size];
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, thread), B(false, false, b_data, b_len, b_stride, b_count, thread);
-    DigitMP<size> S(false, false, s_data, s_len, s_stride, count, thread);
+    uint32_t aindex=thread, bindex=thread, sindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[bindex%b_indices_count];
+    if(NULL!=out_indices) sindex=out_indices[sindex];
+
+    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), B(false, false, b_data, b_len, b_stride, b_count, bindex);
+    DigitMP<size> S(false, false, s_data, s_len, s_stride, count, sindex);
 
     add<size>(registers, S, A, B);
 
@@ -132,6 +152,11 @@ __global__ void regmp_sub_kernel(sub_arguments_t sub_arguments, int32_t count) {
   int32_t     b_len=sub_arguments.b_len;
   int32_t     b_stride=sub_arguments.b_stride;
   int32_t     b_count=sub_arguments.b_count;
+  uint32_t   *a_indices=sub_arguments.a_indices;
+  uint32_t   *b_indices=sub_arguments.b_indices;
+  uint32_t   *out_indices=sub_arguments.out_indices;
+  uint32_t    a_indices_count=sub_arguments.a_indices_count;
+  uint32_t    b_indices_count=sub_arguments.b_indices_count;
 
   PTXInliner  inliner;
   xmpLimb_t   registers[2*size];
@@ -141,7 +166,12 @@ __global__ void regmp_sub_kernel(sub_arguments_t sub_arguments, int32_t count) {
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    data=a_data + thread%a_count;
+    int aindex=thread, bindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    
+    data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
       if(index<a_len)
@@ -150,7 +180,7 @@ __global__ void regmp_sub_kernel(sub_arguments_t sub_arguments, int32_t count) {
         A[index]=0;
     }
 
-    data=b_data + thread%b_count;
+    data=b_data + bindex%b_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
       if(index<b_len)
@@ -162,7 +192,7 @@ __global__ void regmp_sub_kernel(sub_arguments_t sub_arguments, int32_t count) {
     _sub(A, A, B, false, true);       // subtract with carry out set
     inliner.SUBC(carry, zero, zero);  // grab the carry flag
 
-    data=d_data + thread;
+    data=d_data + outindex;
     #pragma unroll
     for(int index=0;index<size;index++)
       if(index<d_len)
@@ -190,13 +220,22 @@ __global__ void digitmp_sub_kernel(sub_arguments_t sub_arguments, int32_t count)
   int32_t    b_len=sub_arguments.b_len;
   int32_t    b_stride=sub_arguments.b_stride;
   int32_t    b_count=sub_arguments.b_count;
+  uint32_t   *a_indices=sub_arguments.a_indices;
+  uint32_t   *b_indices=sub_arguments.b_indices;
+  uint32_t   *out_indices=sub_arguments.out_indices;
+  uint32_t    a_indices_count=sub_arguments.a_indices_count;
+  uint32_t    b_indices_count=sub_arguments.b_indices_count;
 
   xmpLimb_t  registers[2*size];
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, thread), B(false, false, b_data, b_len, b_stride, b_count, thread);
-    DigitMP<size> D(false, false, d_data, d_len, d_stride, count, thread);
+    int aindex=thread, bindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), B(false, false, b_data, b_len, b_stride, b_count, bindex);
+    DigitMP<size> D(false, false, d_data, d_len, d_stride, count, outindex);
 
     sub<size>(registers, D, A, B);
 
@@ -214,6 +253,9 @@ __global__ void regmp_sqr_kernel(sqr_arguments_t sqr_arguments, int32_t count) {
   int32_t    a_len=sqr_arguments.a_len;
   int32_t    a_stride=sqr_arguments.a_stride;
   int32_t    a_count=sqr_arguments.a_count;
+  uint32_t   *a_indices=sqr_arguments.a_indices;
+  uint32_t   *out_indices=sqr_arguments.out_indices;
+  uint32_t    a_indices_count=sqr_arguments.a_indices_count;
 
   xmpLimb_t  registers[3*size];
   RegMP      A(registers, 0, 0, size), P(registers, 0, size, 2*size);
@@ -221,7 +263,11 @@ __global__ void regmp_sqr_kernel(sqr_arguments_t sqr_arguments, int32_t count) {
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    data=a_data + thread%a_count;
+    int aindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    
+    data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
       if(index<a_len)
@@ -232,7 +278,7 @@ __global__ void regmp_sqr_kernel(sqr_arguments_t sqr_arguments, int32_t count) {
 
     sqr(P, A);
 
-    data=p_data + thread;
+    data=p_data + outindex;
     #pragma unroll
     for(int index=0;index<2*size;index++)
       if(index<p_len)
@@ -255,13 +301,19 @@ __global__ void digitmp_sqr_kernel(sqr_arguments_t sqr_arguments, int32_t count)
   int32_t    a_len=sqr_arguments.a_len;
   int32_t    a_stride=sqr_arguments.a_stride;
   int32_t    a_count=sqr_arguments.a_count;
+  uint32_t   *a_indices=sqr_arguments.a_indices;
+  uint32_t   *out_indices=sqr_arguments.out_indices;
+  uint32_t    a_indices_count=sqr_arguments.a_indices_count;
 
   xmpLimb_t  registers[4*size+1];
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, thread);
-    DigitMP<size> P(false, false, p_data, p_len, p_stride, count, thread);
+    int aindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex);
+    DigitMP<size> P(false, false, p_data, p_len, p_stride, count, outindex);
 
     sqr<size>(registers, P, A);
 
@@ -283,6 +335,11 @@ __global__ void regmp_mul_kernel(mul_arguments_t mul_arguments, int32_t count) {
   int32_t    b_len=mul_arguments.b_len;
   int32_t    b_stride=mul_arguments.b_stride;
   int32_t    b_count=mul_arguments.b_count;
+  uint32_t   *a_indices=mul_arguments.a_indices;
+  uint32_t   *b_indices=mul_arguments.b_indices;
+  uint32_t   *out_indices=mul_arguments.out_indices;
+  uint32_t    a_indices_count=mul_arguments.a_indices_count;
+  uint32_t    b_indices_count=mul_arguments.b_indices_count;
 
   xmpLimb_t *data;
 
@@ -297,7 +354,12 @@ __global__ void regmp_mul_kernel(mul_arguments_t mul_arguments, int32_t count) {
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    data=a_data + thread%a_count;
+    int aindex=thread, bindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    
+    data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<a_size;index++) {
       if(index<a_len)
@@ -306,7 +368,7 @@ __global__ void regmp_mul_kernel(mul_arguments_t mul_arguments, int32_t count) {
         A[index]=0;
     }
 
-    data=b_data + thread%b_count;
+    data=b_data + bindex%b_count;
     #pragma unroll
     for(int index=0;index<b_size;index++) {
       if(index<b_len)
@@ -317,7 +379,7 @@ __global__ void regmp_mul_kernel(mul_arguments_t mul_arguments, int32_t count) {
 
     mul(P, A, B);
 
-    data=p_data + thread;
+    data=p_data + outindex;
     #pragma unroll
     for(int index=0;index<a_size+b_size;index++)
       if(index<p_len)
@@ -344,13 +406,22 @@ __global__ void digitmp_mul_kernel(mul_arguments_t mul_arguments, int32_t count)
   int32_t    b_len=mul_arguments.b_len;
   int32_t    b_stride=mul_arguments.b_stride;
   int32_t    b_count=mul_arguments.b_count;
+  uint32_t   *a_indices=mul_arguments.a_indices;
+  uint32_t   *b_indices=mul_arguments.b_indices;
+  uint32_t   *out_indices=mul_arguments.out_indices;
+  uint32_t    a_indices_count=mul_arguments.a_indices_count;
+  uint32_t    b_indices_count=mul_arguments.b_indices_count;
 
   xmpLimb_t  registers[4*size+1];
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, thread), B(false, false, b_data, b_len, b_stride, b_count, thread);
-    DigitMP<size> P(false, false, p_data, p_len, p_stride, count, thread);
+    int aindex=thread, bindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), B(false, false, b_data, b_len, b_stride, b_count, bindex);
+    DigitMP<size> P(false, false, p_data, p_len, p_stride, count, outindex);
 
     mul<size>(registers, P, A, B);
 
@@ -372,6 +443,11 @@ __global__ void regmp_div_kernel(div_arguments_t div_arguments, int32_t count) {
   int32_t    b_len=div_arguments.b_len;
   int32_t    b_stride=div_arguments.b_stride;
   int32_t    b_count=div_arguments.b_count;
+  uint32_t   *a_indices=div_arguments.a_indices;
+  uint32_t   *b_indices=div_arguments.b_indices;
+  uint32_t   *out_indices=div_arguments.out_indices;
+  uint32_t    a_indices_count=div_arguments.a_indices_count;
+  uint32_t    b_indices_count=div_arguments.b_indices_count;
 
   xmpLimb_t  registers[a_size+b_size+2];
   RegMP      A(registers, 0, 0, a_size+2), B(registers, 0, a_size+2, b_size);
@@ -379,7 +455,12 @@ __global__ void regmp_div_kernel(div_arguments_t div_arguments, int32_t count) {
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    data=a_data + thread%a_count;
+    int aindex=thread, bindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+
+    data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<a_size;index++) {
       if(index<a_len)
@@ -390,7 +471,7 @@ __global__ void regmp_div_kernel(div_arguments_t div_arguments, int32_t count) {
     A[a_size]=0;
     A[a_size+1]=0;
 
-    data=b_data + thread%b_count;
+    data=b_data + bindex%b_count;
     #pragma unroll
     for(int index=0;index<b_size;index++) {
       if(index<b_len)
@@ -401,7 +482,7 @@ __global__ void regmp_div_kernel(div_arguments_t div_arguments, int32_t count) {
 
     div(A, B);
 
-    data=q_data + thread;
+    data=q_data + outindex;
     #pragma unroll
     for(int index=0;index<a_size;index++)
       data[index*q_stride]=A[index];
@@ -428,13 +509,23 @@ __global__ void digitmp_div_kernel(div_arguments_t div_arguments, int32_t count)
   int32_t    b_stride=div_arguments.b_stride;
   int32_t    b_count=div_arguments.b_count;
   xmpLimb_t *scratch=div_arguments.scratch;
+  uint32_t   *a_indices=div_arguments.a_indices;
+  uint32_t   *b_indices=div_arguments.b_indices;
+  uint32_t   *out_indices=div_arguments.out_indices;
+  uint32_t    a_indices_count=div_arguments.a_indices_count;
+  uint32_t    b_indices_count=div_arguments.b_indices_count;
 
   xmpLimb_t  registers[4*size+4];
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, thread), B(false, false, b_data, b_len, b_stride, b_count, thread);
-    DigitMP<size> Q(false, false, q_data, q_len, q_stride, count, thread);
+    int aindex=thread, bindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    
+    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), B(false, false, b_data, b_len, b_stride, b_count, bindex);
+    DigitMP<size> Q(false, false, q_data, q_len, q_stride, count, outindex);
 
     div<size>(registers, Q, A, B, scratch);
 
@@ -456,6 +547,11 @@ __global__ void regmp_mod_kernel(mod_arguments_t mod_arguments, int32_t count) {
   int32_t    b_len=mod_arguments.b_len;
   int32_t    b_stride=mod_arguments.b_stride;
   int32_t    b_count=mod_arguments.b_count;
+  uint32_t   *a_indices=mod_arguments.a_indices;
+  uint32_t   *b_indices=mod_arguments.b_indices;
+  uint32_t   *out_indices=mod_arguments.out_indices;
+  uint32_t    a_indices_count=mod_arguments.a_indices_count;
+  uint32_t    b_indices_count=mod_arguments.b_indices_count;
 
   xmpLimb_t  registers[a_size+b_size+2];
   RegMP      A(registers, 0, 0, a_size+2), B(registers, 0, a_size+2, b_size);
@@ -463,7 +559,12 @@ __global__ void regmp_mod_kernel(mod_arguments_t mod_arguments, int32_t count) {
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    data=a_data + thread%a_count;
+    int aindex=thread, bindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    
+    data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<a_size;index++) {
       if(index<a_len)
@@ -474,7 +575,7 @@ __global__ void regmp_mod_kernel(mod_arguments_t mod_arguments, int32_t count) {
     A[a_size]=0;
     A[a_size+1]=0;
 
-    data=b_data + thread%b_count;
+    data=b_data + bindex%b_count;
     #pragma unroll
     for(int index=0;index<b_size;index++) {
       if(index<b_len)
@@ -485,7 +586,7 @@ __global__ void regmp_mod_kernel(mod_arguments_t mod_arguments, int32_t count) {
 
     rem(A, B);
 
-    data=r_data + thread;
+    data=r_data + outindex;
     #pragma unroll
     for(int index=0;index<b_size;index++)
       data[index*r_stride]=A[index];
@@ -511,13 +612,23 @@ __global__ void digitmp_mod_kernel(mod_arguments_t mod_arguments, int32_t count)
   int32_t    b_stride=mod_arguments.b_stride;
   int32_t    b_count=mod_arguments.b_count;
   xmpLimb_t *scratch=mod_arguments.scratch;
+  uint32_t   *a_indices=mod_arguments.a_indices;
+  uint32_t   *b_indices=mod_arguments.b_indices;
+  uint32_t   *out_indices=mod_arguments.out_indices;
+  uint32_t    a_indices_count=mod_arguments.a_indices_count;
+  uint32_t    b_indices_count=mod_arguments.b_indices_count;
 
   xmpLimb_t  registers[4*size+4];
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, thread), B(false, false, b_data, b_len, b_stride, b_count, thread);
-    DigitMP<size> R(false, false, r_data, r_len, r_stride, count, thread);
+    int aindex=thread, bindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    
+    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), B(false, false, b_data, b_len, b_stride, b_count, bindex);
+    DigitMP<size> R(false, false, r_data, r_len, r_stride, count, outindex);
 
     rem<size>(registers, R, A, B, scratch);
 
@@ -542,6 +653,12 @@ __global__ void regmp_divmod_kernel(divmod_arguments_t divmod_arguments, int32_t
   int32_t    b_len=divmod_arguments.b_len;
   int32_t    b_stride=divmod_arguments.b_stride;
   int32_t    b_count=divmod_arguments.b_count;
+  uint32_t   *a_indices=divmod_arguments.a_indices;
+  uint32_t   *b_indices=divmod_arguments.b_indices;
+  uint32_t   *q_indices=divmod_arguments.q_indices;
+  uint32_t   *r_indices=divmod_arguments.r_indices;
+  uint32_t    a_indices_count=divmod_arguments.a_indices_count;
+  uint32_t    b_indices_count=divmod_arguments.b_indices_count;
 
   xmpLimb_t  registers[a_size+b_size+2];
   RegMP      A(registers, 0, 0, a_size+2), B(registers, 0, a_size+2, b_size);
@@ -549,7 +666,13 @@ __global__ void regmp_divmod_kernel(divmod_arguments_t divmod_arguments, int32_t
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    data=a_data + thread%a_count;
+    int aindex=thread, bindex=thread, qindex=thread, rindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=q_indices) qindex=q_indices[thread];
+    if(NULL!=r_indices) rindex=r_indices[thread];
+    
+    data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<a_size;index++) {
       if(index<a_len)
@@ -560,7 +683,7 @@ __global__ void regmp_divmod_kernel(divmod_arguments_t divmod_arguments, int32_t
     A[a_size]=0;
     A[a_size+1]=0;
 
-    data=b_data + thread%b_count;
+    data=b_data + bindex%b_count;
     #pragma unroll
     for(int index=0;index<b_size;index++) {
       if(index<b_len)
@@ -571,7 +694,7 @@ __global__ void regmp_divmod_kernel(divmod_arguments_t divmod_arguments, int32_t
 
     div_rem(A, B);
 
-    data=q_data + thread;
+    data=q_data + qindex;
     #pragma unroll
     for(int index=0;index<a_size;index++)
       data[index*q_stride]=A[index];
@@ -579,7 +702,7 @@ __global__ void regmp_divmod_kernel(divmod_arguments_t divmod_arguments, int32_t
     for(int index=a_size;index<q_len;index++)
       data[index*q_stride]=0;
 
-    data=r_data + thread;
+    data=r_data + rindex;
     #pragma unroll
     for(int index=0;index<b_size;index++)
       data[index*r_stride]=B[index];
@@ -609,13 +732,25 @@ __global__ void digitmp_divmod_kernel(divmod_arguments_t divmod_arguments, int32
   int32_t    b_stride=divmod_arguments.b_stride;
   int32_t    b_count=divmod_arguments.b_count;
   xmpLimb_t *scratch=divmod_arguments.scratch;
+  uint32_t   *a_indices=divmod_arguments.a_indices;
+  uint32_t   *b_indices=divmod_arguments.b_indices;
+  uint32_t   *q_indices=divmod_arguments.q_indices;
+  uint32_t   *r_indices=divmod_arguments.r_indices;
+  uint32_t    a_indices_count=divmod_arguments.a_indices_count;
+  uint32_t    b_indices_count=divmod_arguments.b_indices_count;
 
   xmpLimb_t  registers[4*size+4];
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, thread), B(false, false, b_data, b_len, b_stride, b_count, thread);
-    DigitMP<size> Q(false, false, q_data, q_len, q_stride, count, thread), R(false, false, r_data, r_len, r_stride, count, thread);
+    int aindex=thread, bindex=thread, qindex=thread, rindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
+    if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
+    if(NULL!=q_indices) qindex=q_indices[thread];
+    if(NULL!=r_indices) rindex=r_indices[thread];
+    
+    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), B(false, false, b_data, b_len, b_stride, b_count, bindex);
+    DigitMP<size> Q(false, false, q_data, q_len, q_stride, count, qindex), R(false, false, r_data, r_len, r_stride, count, rindex);
 
     div_rem<size>(registers, Q, R, A, B, scratch);
 
@@ -636,6 +771,10 @@ __global__ void regmp_ar_kernel(ar_arguments_t ar_arguments, int32_t count) {
   int32_t    mod_len=ar_arguments.mod_len;
   int32_t    mod_stride=ar_arguments.mod_stride;
   int32_t    mod_count=ar_arguments.mod_count;
+  uint32_t   *a_indices=ar_arguments.a_indices;
+  uint32_t   *mod_indices=ar_arguments.mod_indices;
+  uint32_t    a_indices_count=ar_arguments.a_indices_count;
+  uint32_t    mod_indices_count=ar_arguments.mod_indices_count;
 
   PTXInliner inliner;
   xmpLimb_t  registers[3*size+2];
@@ -646,7 +785,11 @@ __global__ void regmp_ar_kernel(ar_arguments_t ar_arguments, int32_t count) {
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    data=a_data + thread%a_count;
+    int aindex=thread, modindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
+    if(NULL!=mod_indices) modindex=mod_indices[modindex%mod_indices_count];
+    
+    data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
       AR[index]=0;
@@ -658,7 +801,7 @@ __global__ void regmp_ar_kernel(ar_arguments_t ar_arguments, int32_t count) {
     AR[size+size]=0;
     AR[size+size+1]=0;
 
-    data=mod_data + thread%mod_count;
+    data=mod_data + modindex%mod_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
       if(index<mod_len)
@@ -695,6 +838,10 @@ __global__ void digitmp_ar_kernel(ar_arguments_t ar_arguments, int32_t count) {
   int32_t    mod_len=ar_arguments.mod_len;
   int32_t    mod_stride=ar_arguments.mod_stride;
   int32_t    mod_count=ar_arguments.mod_count;
+  uint32_t   *a_indices=ar_arguments.a_indices;
+  uint32_t   *mod_indices=ar_arguments.mod_indices;
+  uint32_t    a_indices_count=ar_arguments.a_indices_count;
+  uint32_t    mod_indices_count=ar_arguments.mod_indices_count;
 
   xmpLimb_t  registers[4*size+4];
   RegMP      ZERO(registers, 0, 0, size);
@@ -702,7 +849,10 @@ __global__ void digitmp_ar_kernel(ar_arguments_t ar_arguments, int32_t count) {
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, thread), MOD(false, false, mod_data, mod_len, mod_stride, mod_count, thread);
+    int aindex=thread, modindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
+    if(NULL!=mod_indices) modindex=mod_indices[modindex%mod_indices_count];
+    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), MOD(false, false, mod_data, mod_len, mod_stride, mod_count, modindex);
     DigitMP<size> WINDOW(false, false, window_data, (4+(1<<window_bits))*digits, thread);
     DigitMP<size> N(WINDOW, 0, digits), REM(WINDOW, 5*digits, digits);
     DigitMP<size> AR(WINDOW, digits, 2*digits+1), AR_LOW(WINDOW, digits, digits), AR_HIGH(WINDOW, 2*digits, digits);
@@ -735,6 +885,9 @@ __global__ void regmp_powm_kernel(powm_arguments_t powm_arguments, int32_t count
   xmpLimb_t *window_data=powm_arguments.window_data;
   int32_t    bits=powm_arguments.bits;
   int32_t    window_bits=powm_arguments.window_bits;
+  uint32_t   *exp_indices=powm_arguments.exp_indices;
+  uint32_t   *out_indices=powm_arguments.out_indices;
+  uint32_t    exp_indices_count=powm_arguments.exp_indices_count;
 
   xmpLimb_t *o, *e, *w;
 
@@ -742,8 +895,12 @@ __global__ void regmp_powm_kernel(powm_arguments_t powm_arguments, int32_t count
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    o=out_data + thread;
-    e=exp_data + thread%exp_count;
+    int expindex=thread, outindex=thread;
+    if(NULL!=exp_indices) expindex=exp_indices[thread%exp_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    
+    o=out_data + outindex;
+    e=exp_data + expindex%exp_count;
     w=window_data + (thread & ~0x1F)*((1<<window_bits)+4)*_words + (thread & 0x1F);
 
     typedef ThreeN_n<_words, _ks, _km> ThreeNModel;
@@ -783,24 +940,31 @@ __global__ void digitmp_powm_kernel(powm_arguments_t powm_arguments, int32_t cou
   int32_t    digits=powm_arguments.digits;
   int32_t    bits=powm_arguments.bits;
   int32_t    window_bits=powm_arguments.window_bits;
+  uint32_t   *exp_indices=powm_arguments.exp_indices;
+  uint32_t   *out_indices=powm_arguments.out_indices;
+  uint32_t    exp_indices_count=powm_arguments.exp_indices_count;
 
-  xmpLimb_t *e;
+  xmpLimb_t *e, *o;
 
   // exp_len is passed in the bits parameters, mod_len is passed in digits parameter
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    e=exp_data + thread%exp_count;
+    int expindex=thread, outindex=thread;
+    if(NULL!=exp_indices) expindex=exp_indices[thread%exp_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[thread];
+    
+    e=exp_data + expindex%exp_count;
+    o=out_data + outindex;
 
     typedef Digitized<use_sm_cache, size> DigitizedModel;
 
-    fwe<DigitizedModel>(out_data, out_len, out_stride,
+    fwe<DigitizedModel>(o, out_len, out_stride,
                         e, exp_stride,
                         mod_count,
                         window_data,
                         digits, bits, window_bits);
 
-    out_data=out_data + blockDim.x*gridDim.x;
     window_data=window_data + blockDim.x*gridDim.x*((1<<window_bits)+4)*digits*size;
 
     if(!gsl)
@@ -820,15 +984,22 @@ __global__ void strided_compare_kernel(cmp_arguments_t cmp_arguments, int32_t co
   int32_t    s_stride=cmp_arguments.b_stride;
   int32_t    s_count=cmp_arguments.b_count;
   int32_t    negate=cmp_arguments.negate;
+  uint32_t   *l_indices=cmp_arguments.a_indices;
+  uint32_t   *s_indices=cmp_arguments.b_indices;
+  uint32_t    l_indices_count=cmp_arguments.a_indices_count;
+  uint32_t    s_indices_count=cmp_arguments.b_indices_count;
 
   xmpLimb_t *l, *s;
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
+    int lindex=thread, sindex=thread;
+    if(NULL!=l_indices) lindex=l_indices[lindex%l_indices_count];
+    if(NULL!=s_indices) sindex=s_indices[sindex%s_indices_count];
     int32_t   result=0;
 
-    l=l_data + thread%l_count;
-    s=s_data + thread%s_count;
+    l=l_data + lindex%l_count;
+    s=s_data + sindex%s_count;
 
     for(int index=l_len-1;index>=s_len;index--)
       if(result==0 && l_data[index*l_stride]!=0)
@@ -863,15 +1034,19 @@ __global__ void strided_popc_kernel(popc_arguments_t popc_arguments, uint32_t co
   int32_t    a_len=popc_arguments.a_len;
   int32_t    a_stride=popc_arguments.a_stride;
   int32_t    a_count=popc_arguments.a_count;
+  uint32_t   *a_indices=popc_arguments.a_indices;
+  uint32_t    a_indices_count=popc_arguments.a_indices_count;
 
   xmpLimb_t *data;
   uint32_t   result;
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
+    int aindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
     result=0;
 
-    data=a_data + thread%a_count;
+    data=a_data + aindex%a_count;
     for(uint32_t index=0;index<a_len;index++)
       result+=__popc(data[index*a_stride]);
     c_data[thread]=result;
@@ -894,14 +1069,24 @@ __global__ void strided_ior_kernel(ior_arguments_t ior_arguments, int32_t count)
   int32_t    s_len=ior_arguments.b_len;
   int32_t    s_stride=ior_arguments.b_stride;
   int32_t    s_count=ior_arguments.b_count;
+  uint32_t   *l_indices=ior_arguments.a_indices;
+  uint32_t   *s_indices=ior_arguments.b_indices;
+  uint32_t    l_indices_count=ior_arguments.a_indices_count;
+  uint32_t    s_indices_count=ior_arguments.b_indices_count;
+  uint32_t    *out_indices=ior_arguments.out_indices;
 
   xmpLimb_t *l, *s, *c;
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    l=l_data + thread%l_count;
-    s=s_data + thread%s_count;
-    c=c_data + thread;
+    int lindex=thread, sindex=thread, outindex=thread;
+    if(NULL!=l_indices) lindex=l_indices[lindex%l_indices_count];
+    if(NULL!=s_indices) sindex=s_indices[sindex%s_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[outindex];
+    
+    l=l_data + lindex%l_count;
+    s=s_data + sindex%s_count;
+    c=c_data + outindex;
 
     for(int index=0;index<s_len;index++)
       c[index*c_stride]=l[index*l_stride] | s[index*s_stride];
@@ -929,14 +1114,24 @@ __global__ void strided_and_kernel(and_arguments_t and_arguments, int32_t count)
   int32_t    s_len=and_arguments.b_len;
   int32_t    s_stride=and_arguments.b_stride;
   int32_t    s_count=and_arguments.b_count;
+  uint32_t   *l_indices=and_arguments.a_indices;
+  uint32_t   *s_indices=and_arguments.b_indices;
+  uint32_t    l_indices_count=and_arguments.a_indices_count;
+  uint32_t    s_indices_count=and_arguments.b_indices_count;
+  uint32_t    *out_indices=and_arguments.out_indices;
 
   xmpLimb_t *l, *s, *c;
-
+  
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    l=l_data + thread%l_count;
-    s=s_data + thread%s_count;
-    c=c_data + thread;
+    int lindex=thread, sindex=thread, outindex=thread;
+    if(NULL!=l_indices) lindex=l_indices[lindex%l_indices_count];
+    if(NULL!=s_indices) sindex=s_indices[sindex%s_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[outindex];
+    
+    l=l_data + lindex%l_count;
+    s=s_data + sindex%s_count;
+    c=c_data + outindex;
 
     for(int index=0;index<s_len;index++)
       c[index*c_stride]=l[index*l_stride] & s[index*s_stride];
@@ -962,14 +1157,24 @@ __global__ void strided_xor_kernel(xor_arguments_t xor_arguments, int32_t count)
   int32_t    s_len=xor_arguments.b_len;
   int32_t    s_stride=xor_arguments.b_stride;
   int32_t    s_count=xor_arguments.b_count;
+  uint32_t   *l_indices=xor_arguments.a_indices;
+  uint32_t   *s_indices=xor_arguments.b_indices;
+  uint32_t    l_indices_count=xor_arguments.a_indices_count;
+  uint32_t    s_indices_count=xor_arguments.b_indices_count;
+  uint32_t    *out_indices=xor_arguments.out_indices;
 
   xmpLimb_t *l, *s, *c;
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    l=l_data + thread%l_count;
-    s=s_data + thread%s_count;
-    c=c_data + thread;
+    int lindex=thread, sindex=thread, outindex=thread;
+    if(NULL!=l_indices) lindex=l_indices[lindex%l_indices_count];
+    if(NULL!=s_indices) sindex=s_indices[sindex%s_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[outindex];
+    
+    l=l_data + lindex%l_count;
+    s=s_data + sindex%s_count;
+    c=c_data + outindex;
 
     for(int index=0;index<s_len;index++)
       c[index*c_stride]=l[index*l_stride] ^ s[index*s_stride];
@@ -994,16 +1199,24 @@ __global__ void strided_not_kernel(not_arguments_t not_arguments, int32_t count)
   int32_t    a_len=not_arguments.a_len;
   int32_t    a_stride=not_arguments.a_stride;
   int32_t    a_count=not_arguments.a_count;
+  uint32_t   *a_indices=not_arguments.a_indices;
+  uint32_t   *c_indices=not_arguments.out_indices;
+  uint32_t    a_indices_count=not_arguments.a_indices_count;
 
   xmpLimb_t *a, *c;
 
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
-    a=a_data + thread%a_count;
-    c=c_data + thread;
+    int aindex=thread, cindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
+    if(NULL!=c_indices) cindex=c_indices[cindex];
+   
+    a=a_data + aindex%a_count;
+    c=c_data + cindex;
 
-    for(int index=0;index<a_len;index++)
+    for(int index=0;index<a_len;index++) {
       c[index*c_stride]=~a[index*a_stride];
+    }
 
     for(int index=a_len;index<c_len;index++)
       c[index*c_stride]=~0;
@@ -1024,15 +1237,22 @@ __global__ void strided_shf_kernel(shf_arguments_t shf_arguments, uint32_t count
   int32_t                   a_count=shf_arguments.a_count;
   int32_t                  *shift_data=shf_arguments.shift_data;
   int32_t                   shift_count=shf_arguments.shift_count;
+  uint32_t                 *a_indices=shf_arguments.a_indices;
+  uint32_t                 *out_indices=shf_arguments.out_indices;
+  uint32_t                  a_indices_count=shf_arguments.a_indices_count;
 
   int32_t                   bits_per_limb=sizeof(xmpLimb_t)*8;
 
   #pragma nounroll
   for(uint32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
+    int aindex=thread, outindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
+    if(NULL!=out_indices) outindex=out_indices[outindex];
+    
     int32_t shift=-shift_data[thread%shift_count];
 
-    xmpLimb_t *out=c_data+thread;
-    const xmpLimb_t * __restrict__ in=a_data+thread%a_count;
+    xmpLimb_t *out=c_data+outindex;
+    const xmpLimb_t * __restrict__ in=a_data+aindex%a_count;
     int32_t limb_off = shift/bits_per_limb;
     int32_t bit_off = (shift%bits_per_limb+bits_per_limb)%bits_per_limb; //compute positive modulo
 

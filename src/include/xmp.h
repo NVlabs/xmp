@@ -52,6 +52,15 @@ typedef enum {
   xmpErrorCuda,
 } xmpError_t;
 
+
+typedef enum {
+} xmpExecutionPolicyParam_t;
+
+union xmpExecutionPolicyValue_t {
+  uint32_t u32;
+  void* p;
+};
+
 inline const char* xmpGetErrorString (xmpError_t error) {
   switch (error) {
     case xmpErrorSuccess:
@@ -84,8 +93,10 @@ inline const char* xmpGetErrorString (xmpError_t error) {
   };
 }
 
+
 typedef struct _xmpHandle_t * xmpHandle_t;
 typedef struct _xmpIntegers_t * xmpIntegers_t;
+typedef struct _xmpExecutionPolicy_t * xmpExecutionPolicy_t;
 
 typedef void* (*xmpAllocFunc)(size_t);
 typedef void (*xmpFreeFunc)(void*);
@@ -100,6 +111,9 @@ xmpError_t XMPAPI xmpHandleDestroy(xmpHandle_t handle);
 xmpError_t XMPAPI xmpHandleSetStream(xmpHandle_t handle, cudaStream_t stream);
 xmpError_t XMPAPI xmpHandleGetStream(xmpHandle_t handle, cudaStream_t *stream);
 
+//set the current execution plicy for the handle
+xmpError_t XMPAPI xmpHandleSetExecutionPolicy(xmpHandle_t handle, xmpExecutionPolicy_t policy);
+
 //get memory functions
 xmpError_t XMPAPI xmpHandleGetMemoryFunctions(xmpHandle_t handle, xmpAllocFunc *ha, xmpFreeFunc *hf, xmpAllocFunc *da, xmpFreeFunc *df);
 
@@ -111,6 +125,16 @@ xmpError_t XMPAPI xmpHandleGetCudaStream(xmpHandle_t handle, cudaStream_t *strea
 
 //get the device associated with the handle
 xmpError_t XMPAPI xmpHandleGetDevice(xmpHandle_t handle, int32_t *device);
+
+//creates an execution policy
+xmpError_t XMPAPI xmpExecutionPolicyCreate(xmpHandle_t handle, xmpExecutionPolicy_t *policy);
+//destroys an execution policy
+xmpError_t XMPAPI xmpExecutionPolicyDestroy(xmpHandle_t handle, xmpExecutionPolicy_t policy);
+
+//set dynamic indices
+xmpError_t XMPAPI xmpExecutionPolicySetIndices(xmpHandle_t handle, xmpExecutionPolicy_t policy, uint32_t which_integer, uint32_t *indices, uint32_t count);
+xmpError_t XMPAPI xmpExecutionPolicySetIndicesAsync(xmpHandle_t handle, xmpExecutionPolicy_t policy, uint32_t which_integer, uint32_t *indices, uint32_t count);
+xmpError_t XMPAPI xmpExecutionPolicySetParameter(xmpHandle_t handle, xmpExecutionPolicy_t policy, xmpExecutionPolicyParam_t param, xmpExecutionPolicyValue_t val);
 
 
 //allocate array of integers

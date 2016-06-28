@@ -55,6 +55,7 @@ xmpError_t XMPAPI xmpIntegersAddAsync(xmpHandle_t handle, xmpIntegers_t s, const
   dim3            blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
   int             device=handle->device;
   add_arguments_t add_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(s->device!=device || a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -64,7 +65,10 @@ xmpError_t XMPAPI xmpIntegersAddAsync(xmpHandle_t handle, xmpIntegers_t s, const
 
   XMP_SET_DEVICE(handle);
 
-  if(s->count<count)
+  if(s->count<count) 
+    return xmpErrorInvalidCount;
+  
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(s->precision<MAX(a->precision,b->precision))
@@ -87,6 +91,23 @@ xmpError_t XMPAPI xmpIntegersAddAsync(xmpHandle_t handle, xmpIntegers_t s, const
   add_arguments.b_len=DIV_ROUND_UP(b->precision, 32);
   add_arguments.b_stride=b->stride;
   add_arguments.b_count=b->count;
+  add_arguments.out_indices=policy->indices[0];
+  add_arguments.a_indices=policy->indices[1];
+  add_arguments.b_indices=policy->indices[2];
+  add_arguments.a_indices_count=policy->indices_count[1];
+  add_arguments.b_indices_count=policy->indices_count[2];
+
+  //if s is in-place we need to work in scratch memory
+  bool inplace = (s==a || s==b);
+  size_t out_size=s->stride*s->nlimbs*sizeof(xmpLimb_t);
+
+  if(inplace) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, out_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+    add_arguments.out_data=(xmpLimb_t*)handle->scratch;
+  }
 
   if(a->precision<=128 && b->precision<=128) {
     configureActiveBlocks(handle, blocks, threads, regmp_add_kernel<GSL, 4>);
@@ -109,6 +130,10 @@ xmpError_t XMPAPI xmpIntegersAddAsync(xmpHandle_t handle, xmpIntegers_t s, const
     digitmp_add_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
   }
 
+  if(inplace) {
+    cudaMemcpyAsync(s->slimbs,add_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
+
   s->setFormat(xmpFormatStrided);
 
   XMP_CHECK_CUDA();
@@ -129,6 +154,7 @@ xmpError_t XMPAPI xmpIntegersSubAsync(xmpHandle_t handle, xmpIntegers_t d, const
   dim3            blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
   int             device=handle->device;
   sub_arguments_t sub_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(d->device!=device || a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -139,6 +165,9 @@ xmpError_t XMPAPI xmpIntegersSubAsync(xmpHandle_t handle, xmpIntegers_t d, const
   XMP_SET_DEVICE(handle);
 
   if(d->count<count)
+    return xmpErrorInvalidCount;
+  
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(d->precision<MAX(a->precision,b->precision))
@@ -159,6 +188,23 @@ xmpError_t XMPAPI xmpIntegersSubAsync(xmpHandle_t handle, xmpIntegers_t d, const
   sub_arguments.b_len=DIV_ROUND_UP(b->precision, 32);
   sub_arguments.b_stride=b->stride;
   sub_arguments.b_count=b->count;
+  sub_arguments.out_indices=policy->indices[0];
+  sub_arguments.a_indices=policy->indices[1];
+  sub_arguments.b_indices=policy->indices[2];
+  sub_arguments.a_indices_count=policy->indices_count[1];
+  sub_arguments.b_indices_count=policy->indices_count[2];
+
+  //if d is indexed and in-place we need to work in scratch memory
+  bool inplace=(d==a || d==b);
+  size_t out_size=d->stride*d->nlimbs*sizeof(xmpLimb_t);
+
+  if(inplace) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, out_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+    sub_arguments.out_data=(xmpLimb_t*)handle->scratch;
+  }
 
   if(a->precision<=128 && b->precision<=128) {
     configureActiveBlocks(handle, blocks, threads, regmp_sub_kernel<GSL, 4>);
@@ -181,16 +227,21 @@ xmpError_t XMPAPI xmpIntegersSubAsync(xmpHandle_t handle, xmpIntegers_t d, const
     digitmp_sub_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
   }
 
+  if(inplace) {
+    cudaMemcpyAsync(d->slimbs,sub_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
+
   d->setFormat(xmpFormatStrided);
 
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
 }
 //computes p=a*a -- private but called from xmpIntegersMulAsync
-xmpError_t xmpIntegersSqrAsync(xmpHandle_t handle, xmpIntegers_t p, const xmpIntegers_t a, uint32_t count) {
+xmpError_t XMPAPI xmpIntegersSqrAsync(xmpHandle_t handle, xmpIntegers_t p, const xmpIntegers_t a, uint32_t count) {
   dim3            blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
   int             device=handle->device;
   sqr_arguments_t sqr_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(p->device!=device || a->device!=device)
     return xmpErrorInvalidDevice;
@@ -201,6 +252,9 @@ xmpError_t xmpIntegersSqrAsync(xmpHandle_t handle, xmpIntegers_t p, const xmpInt
   XMP_SET_DEVICE(handle);
 
   if(p->count<count)
+    return xmpErrorInvalidCount;
+  
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(p->precision<a->precision)
@@ -229,6 +283,9 @@ xmpError_t xmpIntegersSqrAsync(xmpHandle_t handle, xmpIntegers_t p, const xmpInt
   sqr_arguments.a_len=DIV_ROUND_UP(a->precision, 32);
   sqr_arguments.a_stride=a->stride;
   sqr_arguments.a_count=a->count;
+  sqr_arguments.out_indices=policy->indices[0];
+  sqr_arguments.a_indices=policy->indices[1];
+  sqr_arguments.a_indices_count=policy->indices_count[1];
 
   if(a->precision<=64) {
     configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 2>);
@@ -279,9 +336,11 @@ xmpError_t XMPAPI xmpIntegersMulAsync(xmpHandle_t handle, xmpIntegers_t p, const
   int             device=handle->device;
   xmpIntegers_t   l, s;
   mul_arguments_t mul_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
-  if(a==b)
+  if(a==b && policy->indices[1]==NULL && policy->indices[2]==NULL) {
     return xmpIntegersSqrAsync(handle, p, a, count);
+  }
 
   if(p->device!=device || a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -292,6 +351,9 @@ xmpError_t XMPAPI xmpIntegersMulAsync(xmpHandle_t handle, xmpIntegers_t p, const
   XMP_SET_DEVICE(handle);
 
   if(p->count<count)
+    return xmpErrorInvalidCount;
+  
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(p->precision<MAX(a->precision,b->precision))
@@ -332,6 +394,11 @@ xmpError_t XMPAPI xmpIntegersMulAsync(xmpHandle_t handle, xmpIntegers_t p, const
   mul_arguments.b_len=DIV_ROUND_UP(s->precision, 32);
   mul_arguments.b_stride=s->stride;
   mul_arguments.b_count=s->count;
+  mul_arguments.out_indices=policy->indices[0];
+  mul_arguments.a_indices=policy->indices[1];
+  mul_arguments.b_indices=policy->indices[2];
+  mul_arguments.a_indices_count=policy->indices_count[1];
+  mul_arguments.b_indices_count=policy->indices_count[2];
 
   // multiply is a very common operator, so we have many sizes
   if(l->precision<=64 && s->precision<=64) {
@@ -414,6 +481,7 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
   int             device=handle->device;
   xmpError_t      error;
   div_arguments_t div_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(q->device!=device || a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -424,6 +492,9 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
   XMP_SET_DEVICE(handle);
 
   if(q->count<count)
+    return xmpErrorInvalidCount;
+  
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(q->precision<a->precision)
@@ -445,6 +516,23 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
   div_arguments.b_stride=b->stride;
   div_arguments.b_count=b->count;
   div_arguments.scratch=NULL;
+  div_arguments.out_indices=policy->indices[0];
+  div_arguments.a_indices=policy->indices[1];
+  div_arguments.b_indices=policy->indices[2];
+  div_arguments.a_indices_count=policy->indices_count[1];
+  div_arguments.b_indices_count=policy->indices_count[2];
+
+  //if q is in-place we need to work in scratch memory
+  bool inplace= (q==a || q==b);
+  size_t out_size=q->stride*q->nlimbs*sizeof(xmpLimb_t);
+
+  if(inplace) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, out_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+    div_arguments.out_data=(xmpLimb_t*)handle->scratch;
+  }
 
   if(a->precision<=64 && b->precision<=64) {
     configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 2, 2>);
@@ -490,17 +578,26 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
 
     bytes=bytes*ROUND_UP(count, GEOMETRY);
 
+    if(inplace) bytes+=out_size;
+
     error=xmpSetNecessaryScratchSize(handle, bytes);
     if(error!=xmpErrorSuccess)
       return error;
 
-    div_arguments.scratch=(xmpLimb_t *)handle->scratch;
+    if(inplace)
+      div_arguments.scratch=(xmpLimb_t *)(reinterpret_cast<char*>(handle->scratch)+out_size);
+    else  
+      div_arguments.scratch=(xmpLimb_t *)handle->scratch;
 
     configureActiveBlocks(handle, blocks, threads, digitmp_div_kernel<GSL, DIGIT>);
     digitmp_div_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
   }
 
   q->setFormat(xmpFormatStrided);
+
+  if(inplace) {
+    cudaMemcpyAsync(q->slimbs,div_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
 
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
@@ -520,6 +617,7 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
   int             device=handle->device;
   xmpError_t      error;
   mod_arguments_t mod_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(m->device!=device || a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -530,6 +628,9 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
   XMP_SET_DEVICE(handle);
 
   if(m->count<count)
+    return xmpErrorInvalidCount;
+  
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(m->precision<b->precision)
@@ -551,6 +652,24 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
   mod_arguments.b_stride=b->stride;
   mod_arguments.b_count=b->count;
   mod_arguments.scratch=NULL;
+  mod_arguments.out_indices=policy->indices[0];
+  mod_arguments.a_indices=policy->indices[1];
+  mod_arguments.b_indices=policy->indices[2];
+  mod_arguments.a_indices_count=policy->indices_count[1];
+  mod_arguments.b_indices_count=policy->indices_count[2];
+
+  //if m is in-place we need to work in scratch memory
+  bool inplace=(m==a || m==b);
+  size_t out_size=m->stride*m->nlimbs*sizeof(xmpLimb_t);
+
+  if(inplace) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, out_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+    mod_arguments.out_data=(xmpLimb_t*)handle->scratch;
+  }
+
 
   if(a->precision<=64 && b->precision<=64) {
     configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 2, 2>);
@@ -593,15 +712,24 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
     size_t  bytes=digits*DIGIT*sizeof(xmpLimb_t);
 
     bytes=bytes*ROUND_UP(count, GEOMETRY);
+    
+    if(inplace) bytes+=out_size;
 
     error=xmpSetNecessaryScratchSize(handle, bytes);
     if(error!=xmpErrorSuccess)
       return error;
-
-    mod_arguments.scratch=(xmpLimb_t *)handle->scratch;
+    
+    if(inplace)
+      mod_arguments.scratch=(xmpLimb_t *)(reinterpret_cast<char*>(handle->scratch)+out_size);
+    else  
+      mod_arguments.scratch=(xmpLimb_t *)handle->scratch;
 
     configureActiveBlocks(handle, blocks, threads, digitmp_mod_kernel<GSL, DIGIT>);
     digitmp_mod_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+  }
+
+  if(inplace) {
+    cudaMemcpyAsync(m->slimbs,mod_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
   }
 
   m->setFormat(xmpFormatStrided);
@@ -624,6 +752,7 @@ xmpError_t XMPAPI xmpIntegersDivModAsync(xmpHandle_t handle, xmpIntegers_t q, xm
   int                device=handle->device;
   xmpError_t         error;
   divmod_arguments_t divmod_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(q->device!=device || m->device!=device || a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -634,6 +763,12 @@ xmpError_t XMPAPI xmpIntegersDivModAsync(xmpHandle_t handle, xmpIntegers_t q, xm
   XMP_SET_DEVICE(handle);
 
   if(m->count<count || q->count<count)
+    return xmpErrorInvalidCount;
+
+  if(policy->indices[0] && policy->indices_count[0]<count)
+    return xmpErrorInvalidCount;
+
+  if(policy->indices[1] && policy->indices_count[1]<count)
     return xmpErrorInvalidCount;
 
   if(q->precision<a->precision || m->precision<b->precision)
@@ -658,6 +793,35 @@ xmpError_t XMPAPI xmpIntegersDivModAsync(xmpHandle_t handle, xmpIntegers_t q, xm
   divmod_arguments.b_stride=b->stride;
   divmod_arguments.b_count=b->count;
   divmod_arguments.scratch=NULL;
+  divmod_arguments.q_indices=policy->indices[0];
+  divmod_arguments.r_indices=policy->indices[1];
+  divmod_arguments.a_indices=policy->indices[2];
+  divmod_arguments.b_indices=policy->indices[3];
+  divmod_arguments.a_indices_count=policy->indices_count[2];
+  divmod_arguments.b_indices_count=policy->indices_count[3];
+
+  //if q or m is in-place we need to work in scratch memory
+  bool qinplace=(q==a || q==b);
+  bool minplace=(m==a || m==b);
+  size_t qout_size=q->stride*q->nlimbs*sizeof(xmpLimb_t);
+  size_t mout_size=m->stride*m->nlimbs*sizeof(xmpLimb_t);
+
+  int num_inplace = qinplace+minplace;
+
+  if(num_inplace>0) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, qout_size+mout_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+  }
+  size_t soffset=0;
+  if(qinplace) {
+    divmod_arguments.q_indices=(xmpLimb_t*)handle->scratch;
+    soffset+=qout_size;
+  }
+  if(minplace) {
+    divmod_arguments.r_indices=(xmpLimb_t*)(reinterpret_cast<char*>(handle->scratch)+soffset);
+  }
 
   if(a->precision<=64 && b->precision<=64) {
     configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 2, 2>);
@@ -711,6 +875,13 @@ xmpError_t XMPAPI xmpIntegersDivModAsync(xmpHandle_t handle, xmpIntegers_t q, xm
     digitmp_divmod_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
   }
 
+  if(qinplace) {
+    cudaMemcpyAsync(q->slimbs,divmod_arguments.q_indices,qout_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
+  if(minplace) {
+    cudaMemcpyAsync(m->slimbs,divmod_arguments.r_indices,mout_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
+
   q->setFormat(xmpFormatStrided);
   m->setFormat(xmpFormatStrided);
 
@@ -734,6 +905,7 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   xmpError_t       error;
   ar_arguments_t   ar_arguments;
   powm_arguments_t powm_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   //verify out, base, exp, mod devices all match handle device
   if(out->device!=device || a->device!=device || exp->device!=device || mod->device!=device)
@@ -747,6 +919,9 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   int32_t precision=out->precision;
 
   if(out->count<count)
+    return xmpErrorInvalidCount;
+
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(out->precision!=precision || a->precision!=precision || mod->precision!=precision)
@@ -798,6 +973,10 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   ar_arguments.mod_len=DIV_ROUND_UP(mod->precision, 32);
   ar_arguments.mod_stride=mod->stride;
   ar_arguments.mod_count=mod->count;
+  ar_arguments.a_indices=policy->indices[1];
+  ar_arguments.mod_indices=policy->indices[3];
+  ar_arguments.a_indices_count=policy->indices_count[1];
+  ar_arguments.mod_indices_count=policy->indices_count[3];
 
   if(precision<=128) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
@@ -842,6 +1021,21 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   powm_arguments.digits=DIV_ROUND_UP(precision, DIGIT*32);
   powm_arguments.bits=exp->precision;
   powm_arguments.window_bits=windowBits;
+  powm_arguments.out_indices=policy->indices[0];
+  powm_arguments.exp_indices=policy->indices[2];
+  powm_arguments.exp_indices_count=policy->indices_count[2];
+
+  //if out is indexed and in-place we need to work in scratch memory
+  bool inplace=(out==exp);
+  size_t out_size=out->stride*out->nlimbs*sizeof(xmpLimb_t);
+
+  if(inplace) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, windowBytes+out_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+    powm_arguments.out_data=(xmpLimb_t*)(reinterpret_cast<char*>(handle->scratch)+windowBytes);
+  }
 
   if(precision<=128) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
@@ -884,6 +1078,10 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
     digitmp_powm_kernel<false, GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
   }
 
+  if(inplace) {
+    cudaMemcpyAsync(out->slimbs,powm_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
+
   out->setFormat(xmpFormatStrided);
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
@@ -906,6 +1104,7 @@ xmpError_t XMPAPI xmpIntegersCmpAsync(xmpHandle_t handle, int32_t *c, const xmpI
   xmpIntegers_t   l, s;
   xmpError_t      error;
   cmp_arguments_t cmp_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -965,6 +1164,10 @@ xmpError_t XMPAPI xmpIntegersCmpAsync(xmpHandle_t handle, int32_t *c, const xmpI
   cmp_arguments.b_stride=s->stride;
   cmp_arguments.b_count=s->count;
   cmp_arguments.negate=negate;
+  cmp_arguments.a_indices=policy->indices[0];
+  cmp_arguments.b_indices=policy->indices[1];
+  cmp_arguments.a_indices_count=policy->indices_count[0];
+  cmp_arguments.b_indices_count=policy->indices_count[1];
 
   configureActiveBlocks(handle, blocks, threads, strided_compare_kernel<GSL>);
   strided_compare_kernel<GSL><<<blocks, threads, 0, handle->stream>>>(cmp_arguments, count);
@@ -990,6 +1193,7 @@ xmpError_t XMPAPI xmpIntegersShfAsync(xmpHandle_t handle, xmpIntegers_t c, const
   dim3            blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
   int             device=handle->device;
   shf_arguments_t shf_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   XMP_CHECK_NE(shift,NULL);
 
@@ -1002,6 +1206,9 @@ xmpError_t XMPAPI xmpIntegersShfAsync(xmpHandle_t handle, xmpIntegers_t c, const
   XMP_SET_DEVICE(handle);
 
   if(c->count<count)
+    return xmpErrorInvalidCount;
+
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   a->requireFormat(handle, xmpFormatStrided);
@@ -1047,6 +1254,9 @@ xmpError_t XMPAPI xmpIntegersShfAsync(xmpHandle_t handle, xmpIntegers_t c, const
   shf_arguments.a_stride=a->stride;
   shf_arguments.a_count=a->count;
   shf_arguments.shift_count=scount;
+  shf_arguments.out_indices=policy->indices[0];
+  shf_arguments.a_indices=policy->indices[1];
+  shf_arguments.a_indices_count=policy->indices_count[1];
 
   configureActiveBlocks(handle, blocks, threads, strided_shf_kernel<GSL>);
   strided_shf_kernel<GSL><<<blocks, threads, 0, handle->stream>>>(shf_arguments, count);
@@ -1077,6 +1287,7 @@ xmpError_t XMPAPI xmpIntegersIorAsync(xmpHandle_t handle, xmpIntegers_t c, const
   int             device=handle->device;
   xmpIntegers_t   l, s;
   ior_arguments_t ior_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(c->device!=device || a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -1087,6 +1298,9 @@ xmpError_t XMPAPI xmpIntegersIorAsync(xmpHandle_t handle, xmpIntegers_t c, const
   XMP_SET_DEVICE(handle);
 
   if(c->count<count)
+    return xmpErrorInvalidCount;
+
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(c->precision<MAX(a->precision, b->precision))
@@ -1116,9 +1330,33 @@ xmpError_t XMPAPI xmpIntegersIorAsync(xmpHandle_t handle, xmpIntegers_t c, const
   ior_arguments.b_len=DIV_ROUND_UP(s->precision, 32);
   ior_arguments.b_stride=s->stride;
   ior_arguments.b_count=s->count;
+  ior_arguments.out_indices=policy->indices[0];
+  ior_arguments.a_indices=policy->indices[1];
+  ior_arguments.b_indices=policy->indices[2];
+  ior_arguments.a_indices_count=policy->indices_count[1];
+  ior_arguments.b_indices_count=policy->indices_count[2];
+
+
+  //if c is indexed and in-place we need to work in scratch memory
+  bool inplace=(c==a || c==b);
+  size_t out_size=c->stride*c->nlimbs*sizeof(xmpLimb_t);
+
+  if(inplace) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, out_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+    ior_arguments.out_data=(xmpLimb_t*)handle->scratch;
+  }
 
   configureActiveBlocks(handle, blocks, threads, strided_ior_kernel<GSL>);
   strided_ior_kernel<GSL><<<blocks, threads, 0, handle->stream>>>(ior_arguments, count);
+
+
+  if(inplace) {
+    cudaMemcpyAsync(c->slimbs,ior_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
+
 
   c->setFormat(xmpFormatStrided);
 
@@ -1139,6 +1377,7 @@ xmpError_t XMPAPI xmpIntegersAndAsync(xmpHandle_t handle, xmpIntegers_t c, const
   int             device=handle->device;
   xmpIntegers_t   l, s;
   and_arguments_t and_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(c->device!=device || a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -1149,6 +1388,9 @@ xmpError_t XMPAPI xmpIntegersAndAsync(xmpHandle_t handle, xmpIntegers_t c, const
   XMP_SET_DEVICE(handle);
 
   if(c->count<count)
+    return xmpErrorInvalidCount;
+
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(c->precision<MAX(a->precision, b->precision))
@@ -1178,9 +1420,30 @@ xmpError_t XMPAPI xmpIntegersAndAsync(xmpHandle_t handle, xmpIntegers_t c, const
   and_arguments.b_len=DIV_ROUND_UP(s->precision, 32);
   and_arguments.b_stride=s->stride;
   and_arguments.b_count=s->count;
+  and_arguments.out_indices=policy->indices[0];
+  and_arguments.a_indices=policy->indices[1];
+  and_arguments.b_indices=policy->indices[2];
+  and_arguments.a_indices_count=policy->indices_count[1];
+  and_arguments.b_indices_count=policy->indices_count[2];
+
+  //if c is indexed and in-place we need to work in scratch memory
+  bool inplace=(c==a || c==b);
+  size_t out_size=c->stride*c->nlimbs*sizeof(xmpLimb_t);
+
+  if(inplace) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, out_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+    and_arguments.out_data=(xmpLimb_t*)handle->scratch;
+  }
 
   configureActiveBlocks(handle, blocks, threads, strided_and_kernel<GSL>);
   strided_and_kernel<GSL><<<blocks, threads, 0, handle->stream>>>(and_arguments, count);
+
+  if(inplace) {
+    cudaMemcpyAsync(c->slimbs,and_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
 
   c->setFormat(xmpFormatStrided);
 
@@ -1201,6 +1464,7 @@ xmpError_t XMPAPI xmpIntegersXorAsync(xmpHandle_t handle, xmpIntegers_t c, const
   int             device=handle->device;
   xmpIntegers_t   l, s;
   xor_arguments_t xor_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(c->device!=device || a->device!=device || b->device!=device)
     return xmpErrorInvalidDevice;
@@ -1211,6 +1475,9 @@ xmpError_t XMPAPI xmpIntegersXorAsync(xmpHandle_t handle, xmpIntegers_t c, const
   XMP_SET_DEVICE(handle);
 
   if(c->count<count)
+    return xmpErrorInvalidCount;
+
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(c->precision<MAX(a->precision, b->precision))
@@ -1240,9 +1507,30 @@ xmpError_t XMPAPI xmpIntegersXorAsync(xmpHandle_t handle, xmpIntegers_t c, const
   xor_arguments.b_len=DIV_ROUND_UP(s->precision, 32);
   xor_arguments.b_stride=s->stride;
   xor_arguments.b_count=s->count;
+  xor_arguments.out_indices=policy->indices[0];
+  xor_arguments.a_indices=policy->indices[1];
+  xor_arguments.b_indices=policy->indices[2];
+  xor_arguments.a_indices_count=policy->indices_count[1];
+  xor_arguments.b_indices_count=policy->indices_count[2];
+
+  //if c is indexed and in-place we need to work in scratch memory
+  bool inplace=(c==a || c==b);
+  size_t out_size=c->stride*c->nlimbs*sizeof(xmpLimb_t);
+
+  if(inplace) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, out_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+    xor_arguments.out_data=(xmpLimb_t*)handle->scratch;
+  }
 
   configureActiveBlocks(handle, blocks, threads, strided_xor_kernel<GSL>);
   strided_xor_kernel<GSL><<<blocks, threads, 0, handle->stream>>>(xor_arguments, count);
+
+  if(inplace) {
+    cudaMemcpyAsync(c->slimbs,xor_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
 
   c->setFormat(xmpFormatStrided);
 
@@ -1262,6 +1550,7 @@ xmpError_t XMPAPI xmpIntegersNotAsync(xmpHandle_t handle, xmpIntegers_t c, const
   dim3            blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
   int             device=handle->device;
   not_arguments_t not_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(c->device!=device || a->device!=device)
     return xmpErrorInvalidDevice;
@@ -1272,6 +1561,9 @@ xmpError_t XMPAPI xmpIntegersNotAsync(xmpHandle_t handle, xmpIntegers_t c, const
   XMP_SET_DEVICE(handle);
 
   if(c->count<count)
+    return xmpErrorInvalidCount;
+
+  if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
   if(c->precision<a->precision)
@@ -1287,9 +1579,29 @@ xmpError_t XMPAPI xmpIntegersNotAsync(xmpHandle_t handle, xmpIntegers_t c, const
   not_arguments.a_len=DIV_ROUND_UP(a->precision, 32);
   not_arguments.a_stride=a->stride;
   not_arguments.a_count=a->count;
+  not_arguments.out_indices=policy->indices[0];
+  not_arguments.a_indices=policy->indices[1];
+  not_arguments.a_indices_count=policy->indices_count[1];
+  
+  //if c is in-place we need to work in scratch memory
+  bool inplace=(c==a);
+  size_t out_size=c->stride*c->nlimbs*sizeof(xmpLimb_t);
+  
+  if(inplace) {
+    xmpError_t error;
+    error=xmpSetNecessaryScratchSize(handle, out_size);
+    if(error!=xmpErrorSuccess)
+      return error;
+    not_arguments.out_data=(xmpLimb_t*)handle->scratch;
+  }
+
 
   configureActiveBlocks(handle, blocks, threads, strided_not_kernel<GSL>);
   strided_not_kernel<GSL><<<blocks, threads, 0, handle->stream>>>(not_arguments, count);
+  
+  if(inplace) {
+    cudaMemcpyAsync(c->slimbs,not_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
+  }
 
   c->setFormat(xmpFormatStrided);
 
@@ -1310,6 +1622,7 @@ xmpError_t XMPAPI xmpIntegersPopcAsync(xmpHandle_t handle, uint32_t *c, const xm
   int              device=handle->device;
   xmpError_t       error;
   popc_arguments_t popc_arguments;
+  xmpExecutionPolicy_t policy=handle->policy;
 
   if(a->device!=device)
     return xmpErrorInvalidDevice;
@@ -1349,6 +1662,8 @@ xmpError_t XMPAPI xmpIntegersPopcAsync(xmpHandle_t handle, uint32_t *c, const xm
   popc_arguments.a_len=DIV_ROUND_UP(a->precision, 32);
   popc_arguments.a_stride=a->stride;
   popc_arguments.a_count=a->count;
+  popc_arguments.a_indices=policy->indices[0];
+  popc_arguments.a_indices_count=policy->indices_count[0];
 
   configureActiveBlocks(handle, blocks, threads, strided_popc_kernel<GSL>);
   strided_popc_kernel<GSL><<<blocks, threads, 0, handle->stream>>>(popc_arguments, count);

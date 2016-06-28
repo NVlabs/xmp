@@ -45,6 +45,18 @@ typedef uint32_t xmpLimb_t;
   if(cudaSuccess!=cudaPeekAtLastError()) \
     return xmpErrorCuda;
 
+const uint32_t XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS = 4;
+struct _xmpExecutionPolicy_t {
+  uint32_t *indices[XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS];
+  uint32_t indices_count[XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS];
+  _xmpExecutionPolicy_t() {
+    for(int i=0;i<XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS; i++)
+      indices[i]=NULL;
+  }
+};
+
+const _xmpExecutionPolicy_t xmpDefaultExecutionPolicy;
+
 struct _xmpHandle_t {
   cudaStream_t stream;
   int32_t device;
@@ -54,7 +66,9 @@ struct _xmpHandle_t {
   void* scratch;
   uint32_t arch;
   uint32_t smCount;
+  xmpExecutionPolicy_t policy;
 };
+
 
 typedef enum {
   xmpOperationAdd,
@@ -95,6 +109,9 @@ typedef struct _xmpDispatchEntry_t {
 
 __global__ void printWordsStrided_kernel(xmpLimb_t* data, int limbs, int stride, int count);
 void printWordsStrided(xmpLimb_t* data, int limbs, int stride, int count);
+__global__ void printWordsCompact_kernel(xmpLimb_t* data, int limbs, int count);
+
+void printWordsCompact(xmpLimb_t* data, int limbs,  int count);
 
 __global__ void xmpC2S_kernel(uint32_t N, uint32_t limbs, uint32_t stride, const uint32_t * in, uint32_t * out);
 __global__ void xmpS2C_kernel(uint32_t N, uint32_t limbs, uint32_t stride, const uint32_t * in, uint32_t * out);

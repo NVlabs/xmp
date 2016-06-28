@@ -23,6 +23,7 @@ IN THE SOFTWARE.
 #include "gtest/gtest.h"
 #include <gmp.h>
 #include <sstream>
+#include <algorithm>
 
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
@@ -577,6 +578,77 @@ TEST(transferTests,xmpIntegersImportExport) {
   xmpHandleDestroy(handle);
 }
 
+#if 0
+//TODO DELETE OR CHANGE TO SET
+TEST(transferTests,xmpIntegersSelect) {
+  xmpHandle_t handle;
+  xmpIntegers_t d_a, d_b;
+  uint32_t *h_a, *h_b;
+  int N=10;
+  int P=32;
+  uint32_t limbs=P/8/sizeof(uint32_t);
+  uint32_t *a_indices, *b_indices;
+  uint32_t words;
+
+  xmpHandleCreate(&handle);
+
+  h_a=(uint32_t*)malloc(N*sizeof(uint32_t));
+  h_b=(uint32_t*)malloc(N*sizeof(uint32_t));
+  a_indices = (uint32_t*)malloc(N*sizeof(uint32_t));
+  b_indices = (uint32_t*)malloc(N*sizeof(uint32_t));
+  
+  for(int i=0;i<N*limbs;i++) h_a[i]=rand32();
+  
+  xmpIntegersCreate(handle,&d_a,P,N);
+  xmpIntegersCreate(handle,&d_b,P,N);
+
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,d_a,limbs,-1,sizeof(uint32_t),-1,0,h_a,N));
+
+  for(int i=0;i<N;i++) a_indices[i]=i;
+  for(int i=0;i<N;i++) b_indices[i]=i;
+
+  //generate random indices
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<N;i++) 
+      std::swap(a_indices[i],a_indices[rand32()%N]);
+    for(int i=0;i<N;i++) 
+      std::swap(b_indices[i],b_indices[rand32()%N]);
+  }
+
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,d_a,a_indices,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,d_b,b_indices,N));
+  
+  //this should reorder a and store into b
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersSelect(handle,d_b,d_a,N));
+
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&words,-1,sizeof(uint32_t),-1,0,d_b,N));
+  ASSERT_EQ(limbs,words);
+
+  //verify order is correct
+  for(int i=0;i<N;i++) {
+    ASSERT_EQ(h_a[a_indices[i]],h_b[b_indices[i]]);
+  }
+  //in place transform
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersSelect(handle,d_a,d_a,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h_b,&words,-1,sizeof(uint32_t),-1,0,d_a,N));
+  ASSERT_EQ(limbs,words);
+  
+  //verify order is correct
+  for(int i=0;i<N;i++) {
+    ASSERT_EQ(h_a[a_indices[i]],h_b[i]);
+  }
+
+  free(h_a); free(h_b); free(a_indices); free(b_indices);
+  xmpIntegersDestroy(handle,d_a);
+  xmpIntegersDestroy(handle,d_b);
+  
+  xmpHandleDestroy(handle);
+}
+#endif
+
+
 TEST(transferTests,xmpIntegersSet) {
   xmpHandle_t handle;
   xmpIntegers_t a, b;
@@ -595,6 +667,119 @@ TEST(transferTests,xmpIntegersSet) {
   xmpIntegersDestroy(handle,a);
   xmpIntegersDestroy(handle,b);
   xmpHandleDestroy(handle);
+}
+
+TEST(transferTests,xmpOrderTest) {
+  xmpHandle_t handle;
+  xmpIntegers_t a, b, c;
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&a,32,2));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&b,32,2));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&c,32,2));
+
+  uint32_t words;
+  uint32_t h[2];
+
+  //array a:  1 and 2
+  h[0]=1;  h[1]=2;
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,a,1,1,sizeof(uint32_t),0,0,h,2));
+
+  //array b:  3 and 4
+  h[0]=3;  h[1]=4;
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,b,1,1,sizeof(uint32_t),0,0,h,2));
+ 
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersAdd(handle,c,a,b,2));
+
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,h,&words,1,sizeof(uint32_t),0,0,c,2));
+  EXPECT_EQ(h[0],4);
+  EXPECT_EQ(h[1],6);
+
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,a));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,b));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,c));
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
+}
+
+TEST(TransferTests,xmpIndexTests) {
+  const int N=10;
+
+  xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
+  xmpIntegers_t a, b;
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&a,32,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&b,32,N));
+
+  uint32_t words;
+  uint32_t indices[N];
+  uint32_t h[N];
+  uint32_t res[N];
+
+  for(int i=0;i<N;i++) {
+    h[i] = i;
+    indices[i] = i;
+  }
+  
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<N;i++) 
+      std::swap(indices[i],indices[rand32()%N]);
+  }
+
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,indices,N));
+
+  //enable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,a,1,-1,sizeof(uint32_t),0,0,h,N));
+
+  //disable indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+  
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,res,&words,-1,sizeof(uint32_t),0,0,a,N));
+  
+  //enable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+  
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,res,&words,-1,sizeof(uint32_t),0,0,a,N));
+  
+  for(int i=0;i<N;i++) {
+    ASSERT_EQ(res[indices[i]],h[indices[i]]);
+  }
+
+  //disable indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+  
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImport(handle,a,1,-1,sizeof(uint32_t),0,0,h,N));
+  
+  //enable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+  
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,res,&words,-1,sizeof(uint32_t),0,0,a,N));
+
+  for(int i=0;i<N;i++) {
+    ASSERT_EQ(res[indices[i]],h[i]);
+  }
+
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,NULL,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,1,indices,N));
+
+  //should reorder a according to indices and store in b
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersSet(handle,b,a,N));
+
+  //disable indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExport(handle,res,&words,-1,sizeof(uint32_t),0,0,b,N));
+  
+  for(int i=0;i<N;i++) {
+    ASSERT_EQ(res[i],h[indices[i]]);
+  }
+
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,a));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
 }
 
 TEST(errorTests,xmpImportExportErrors) {
@@ -897,9 +1082,11 @@ TEST_P(PowmTest,opTests) {
 
   //allocate xmp integers
   xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
   xmpIntegers_t x_c, x_b, x_e, x_m;
   ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
-  
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
+
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_c,cP,cN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_b,bP,bN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_m,mP,mN));
@@ -940,50 +1127,100 @@ TEST_P(PowmTest,opTests) {
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_e,elimbs,-1,sizeof(uint32_t),-1,0,h_e,eN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_m,mlimbs,-1,sizeof(uint32_t),-1,0,h_m,mN));
 
+  uint32_t *c_indices, *e_indices, *b_indices, *m_indices;
+  c_indices=(uint32_t*)malloc(cN*sizeof(uint32_t));
+  b_indices=(uint32_t*)malloc(bN*sizeof(uint32_t));
+  e_indices=(uint32_t*)malloc(eN*sizeof(uint32_t));
+  m_indices=(uint32_t*)malloc(mN*sizeof(uint32_t));
+
+  for(int i=0;i<cN;i++) c_indices[i]=i;
+  for(int i=0;i<bN;i++) b_indices[i]=i;
+  for(int i=0;i<eN;i++) e_indices[i]=i;
+  for(int i=0;i<mN;i++) m_indices[i]=i;
+
+  //generate random indices for a, b and c
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<cN;i++) 
+      std::swap(c_indices[i],c_indices[rand32()%cN]);
+    for(int i=0;i<bN;i++) 
+      std::swap(b_indices[i],b_indices[rand32()%bN]);
+    for(int i=0;i<eN;i++) 
+      std::swap(e_indices[i],e_indices[rand32()%eN]);
+    for(int i=0;i<mN;i++) 
+      std::swap(m_indices[i],m_indices[rand32()%mN]);
+  }
+
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,c_indices,cN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,1,b_indices,bN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,2,e_indices,eN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,3,m_indices,mN));
+
+  //Enable policy for dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersPowmAsync(handle,x_c,x_b,x_e,x_m,N));
+  
+  //disable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+  
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_c,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_c,cN));
 
   //import to mpz
-  #pragma omp parallel for
+#pragma omp parallel for
   for(int i=0;i<bN;i++) mpz_import(g_b[i],blimbs,-1,sizeof(uint32_t),-1,0,&h_b[i*blimbs]);
-  #pragma omp parallel for
+#pragma omp parallel for
   for(int i=0;i<eN;i++) mpz_import(g_e[i],elimbs,-1,sizeof(uint32_t),-1,0,&h_e[i*elimbs]);
-  #pragma omp parallel for
+#pragma omp parallel for
   for(int i=0;i<mN;i++) mpz_import(g_m[i],mlimbs,-1,sizeof(uint32_t),-1,0,&h_m[i*mlimbs]);
 
   //perform operation on the host
-  #pragma omp parallel for
+#pragma omp parallel for
   for(int i=0;i<N;i++) {
-    mpz_t *cc=&g_c[i], *bb, *ee, *mm;
-    bb= &g_b[i % bN]; 
-    ee= &g_e[i % eN]; 
-    mm= &g_m[i % mN ]; 
+    mpz_t *cc=&g_c[c_indices[i]], *bb, *ee, *mm;
+    bb= &g_b[b_indices[i%bN] % bN]; 
+    ee= &g_e[e_indices[i%eN] % eN]; 
+    mm= &g_m[m_indices[i%mN] % mN ]; 
     mpz_powm(*cc,*bb,*ee,*mm);
   }
 
   //export from gmp
-  #pragma omp parallel for
-  for(int i=0;i<N;i++) mpz_export(&h_res[i*climbs],NULL,-1,sizeof(uint32_t),-1,0,g_c[i]);
-  
+#pragma omp parallel for
+  for(int i=0;i<N;i++) mpz_export(&h_res[c_indices[i]*climbs],NULL,-1,sizeof(uint32_t),-1,0,g_c[c_indices[i]]);
+
   ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
 
   //compare results
-  for(int i=0;i<N*climbs;i++) {
-    ASSERT_EQ(h_res[i],d_res[i]);
+  for(int i=0;i<N;i++) {
+    for(int j=0;j<climbs;j++) {
+      ASSERT_EQ(h_res[c_indices[i]*climbs+j],d_res[c_indices[i]*climbs+j]);
+    }
   }
 
+  //in place tests
   if(cN==bN && cP==bP) {
+
+    //Enable policy for dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+
     ASSERT_EQ(xmpErrorSuccess,xmpIntegersPowmAsync(handle,x_b,x_b,x_e,x_m,N));
+
+    //disable dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+
     //export from xmp
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_b,N));
-  
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_b,bN));
+
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
-  
+
     //compare results
-    for(int i=0;i<N*climbs;i++) {
-      ASSERT_EQ(h_res[i],d_res[i]);
+    for(int i=0;i<N;i++) {
+      for(int j=0;j<climbs;j++) {
+        ASSERT_EQ(h_res[c_indices[i]*climbs+j],d_res[c_indices[i]*climbs+j]);
+      }
     }
   }
 
@@ -993,6 +1230,7 @@ TEST_P(PowmTest,opTests) {
   for(int i=0;i<eN;i++) mpz_clear(g_e[i]);
   for(int i=0;i<mN;i++) mpz_clear(g_m[i]);
 
+  free(c_indices), free(e_indices), free(b_indices), free(m_indices);
   free(h_b); free(h_e); free(h_m); free(h_res); free(d_res);
   free(g_c); free(g_b); free(g_e); free(g_m);
 
@@ -1000,6 +1238,7 @@ TEST_P(PowmTest,opTests) {
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_e));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_c));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_b));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
   ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
 }
 
@@ -1013,9 +1252,11 @@ TEST_P(ShfTest,opTests) {
 
   //allocate xmp integers
   xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
   xmpIntegers_t x_c, x_a;
   ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
-  
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
+
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_c,cP,cN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_a,aP,aN));
 
@@ -1031,7 +1272,7 @@ TEST_P(ShfTest,opTests) {
   //intitialize resutls to 0 as gmp may not write all of the bits 
   memset(d_res,0,sizeof(uint32_t)*N*climbs);
   memset(h_res,0,sizeof(uint32_t)*N*hlimbs);
-  
+
   mpz_t *g_c, *g_a;
 
   g_c=(mpz_t*)malloc(sizeof(mpz_t)*cN);
@@ -1049,22 +1290,48 @@ TEST_P(ShfTest,opTests) {
   //import to xmp
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
 
+  uint32_t *a_indices, *c_indices;
+  a_indices=(uint32_t*)malloc(aN*sizeof(uint32_t));
+  c_indices=(uint32_t*)malloc(cN*sizeof(uint32_t));
+
+  for(int i=0;i<aN;i++) a_indices[i]=i;
+  for(int i=0;i<cN;i++) c_indices[i]=i;
+
+  //generate random indices for a, b and c
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<aN;i++) 
+      std::swap(a_indices[i],a_indices[rand32()%aN]);
+    for(int i=0;i<cN;i++) 
+      std::swap(c_indices[i],c_indices[rand32()%cN]);
+  }
+
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,c_indices,cN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,1,a_indices,aN));
+
+  //Enable policy for dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersShfAsync(handle,x_c,x_a,shift,sN,N));
- 
+
+  //disable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+
   uint32_t words;
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,N));
-  
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,cN));
+
   //import to mpz
-  #pragma omp parallel for
+#pragma omp parallel for
   for(int i=0;i<aN;i++) mpz_import(g_a[i],alimbs,-1,sizeof(uint32_t),-1,0,&h_a[i*alimbs]);
 
   //perform operation on the host
-  #pragma omp parallel for
+#pragma omp parallel for
   for(int i=0;i<N;i++) {
-    mpz_t *cc=&g_c[i], *aa;
-    aa= &g_a[i % aN]; 
+    mpz_t *cc=&g_c[c_indices[i]], *aa;
+    aa= &g_a[a_indices[i%aN] % aN]; 
     if(shift[i]>=0) { //mul
       mpz_mul_2exp(*cc,*aa,shift[i]);
     } else { //div
@@ -1073,30 +1340,37 @@ TEST_P(ShfTest,opTests) {
   }
 
   //export from gmp
-  #pragma omp parallel for
-  for(int i=0;i<N;i++) mpz_export(&h_res[i*hlimbs],NULL,-1,sizeof(uint32_t),-1,0,g_c[i]);
-  
+#pragma omp parallel for
+  for(int i=0;i<N;i++) mpz_export(&h_res[c_indices[i]*hlimbs],NULL,-1,sizeof(uint32_t),-1,0,g_c[c_indices[i]]);
+
   ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
- 
-  
+
+
   //compare results
   for(int i=0;i<N;i++) {
     for(int j=0;j<climbs;j++) {
-      ASSERT_EQ(h_res[i*hlimbs+j],d_res[i*climbs+j]);
+      ASSERT_EQ(h_res[c_indices[i]*hlimbs+j],d_res[c_indices[i]*climbs+j]);
     }
   }
 
   //do in place tests when they make sense
   if(cP==aP && cN==aN) {
+    //Enable policy for dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));    
+
     ASSERT_EQ(xmpErrorSuccess,xmpIntegersShfAsync(handle,x_a,x_a,shift,sN,N));
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,N));
+
+    //disable dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,aN));
 
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
 
     //compare results
     for(int i=0;i<N;i++) {
       for(int j=0;j<climbs;j++) {
-        ASSERT_EQ(h_res[i*hlimbs+j],d_res[i*climbs+j]);
+        ASSERT_EQ(h_res[c_indices[i]*hlimbs+j],d_res[c_indices[i]*climbs+j]);
       }
     }
   }
@@ -1104,11 +1378,13 @@ TEST_P(ShfTest,opTests) {
   for(int i=0;i<cN;i++) mpz_clear(g_c[i]);
   for(int i=0;i<aN;i++) mpz_clear(g_a[i]);
 
+  free(a_indices); free(c_indices);
   free(g_c); free(g_a);
   free(h_a); free(h_res); free(d_res);
 
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_c));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_a));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
   ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
 }
 
@@ -1118,12 +1394,14 @@ TEST_P(NotTest,opTests) {
   uint32_t cP=p.P1, aP=p.P2;
   uint32_t climbs=cP/(8*sizeof(uint32_t));
   uint32_t alimbs=aP/(8*sizeof(uint32_t));
- 
+
   //allocate xmp integers
   xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
   xmpIntegers_t x_c, x_a;
   ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
-  
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
+
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_c,cP,cN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_a,aP,aN));
 
@@ -1144,46 +1422,84 @@ TEST_P(NotTest,opTests) {
   //import to xmp
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
 
+  uint32_t *a_indices, *c_indices;
+  a_indices=(uint32_t*)malloc(aN*sizeof(uint32_t));
+  c_indices=(uint32_t*)malloc(cN*sizeof(uint32_t));
+
+  for(int i=0;i<aN;i++) a_indices[i]=i;
+  for(int i=0;i<cN;i++) c_indices[i]=i;
+
+  //generate random indices for a, b and c
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<aN;i++) 
+      std::swap(a_indices[i],a_indices[rand32()%aN]);
+    for(int i=0;i<cN;i++) 
+      std::swap(c_indices[i],c_indices[rand32()%cN]);
+  }
+
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,c_indices,cN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,1,a_indices,aN));
+
+  //Enable policy for dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy)); 
+
+
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersNotAsync(handle,x_c,x_a,N));
- 
+
+  //disable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+
   uint32_t words;
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,N));
-  
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,cN));
+
   ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
-  
+
   //compare results
   for(int i=0;i<N;i++) {
     for(int j=0;j<climbs;j++) {
-      if(j<alimbs)
-        ASSERT_EQ(~h_a[i%aN*alimbs+j],d_res[i*climbs+j]);
+      if(j<alimbs) 
+        ASSERT_EQ(~h_a[a_indices[i%aN]%aN*alimbs+j],d_res[c_indices[i]*climbs+j]);
       else 
-        ASSERT_EQ(~0,d_res[i*climbs+j]);
+        ASSERT_EQ(~0,d_res[c_indices[i]*climbs+j]);
     }
   }
 
   if(cN==aN && cP==aP) {
+
+    //Enable policy for dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+
     ASSERT_EQ(xmpErrorSuccess,xmpIntegersNotAsync(handle,x_a,x_a,N));
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,N));
-  
+
+
+    //disable dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,aN));
+
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
-  
+
     //compare results
     for(int i=0;i<N;i++) {
       for(int j=0;j<climbs;j++) {
         if(j<alimbs)
-          ASSERT_EQ(~h_a[i%aN*alimbs+j],d_res[i*climbs+j]);
+          ASSERT_EQ(~h_a[a_indices[i%aN]%aN*alimbs+j],d_res[c_indices[i]*climbs+j]);
         else 
-          ASSERT_EQ(~0,d_res[i*climbs+j]);
+          ASSERT_EQ(~0,d_res[c_indices[i]*climbs+j]);
       }
     }
   }
 
+  free(a_indices); free(c_indices);
   free(h_a); free(d_res);
 
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_c));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_a));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
   ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
 }
 
@@ -1201,8 +1517,10 @@ TEST_P(genericTwoInOneOutTest,opTests) {
 
   //allocate xmp integers
   xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
   xmpIntegers_t x_c, x_a, x_b;
   ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
   
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_c,cP,cN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_a,aP,aN));
@@ -1240,16 +1558,45 @@ TEST_P(genericTwoInOneOutTest,opTests) {
   //import to xmp
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,blimbs,-1,sizeof(uint32_t),-1,0,h_b,bN));
+  
+  uint32_t *a_indices, *b_indices, *c_indices;
+  a_indices=(uint32_t*)malloc(aN*sizeof(uint32_t));
+  b_indices=(uint32_t*)malloc(bN*sizeof(uint32_t));
+  c_indices=(uint32_t*)malloc(cN*sizeof(uint32_t));
 
+  for(int i=0;i<aN;i++) a_indices[i]=i;
+  for(int i=0;i<bN;i++) b_indices[i]=i;
+  for(int i=0;i<cN;i++) c_indices[i]=i;
+
+  //generate random indices for a, b and c
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<aN;i++) 
+      std::swap(a_indices[i],a_indices[rand32()%aN]);
+    for(int i=0;i<bN;i++) 
+      std::swap(b_indices[i],b_indices[rand32()%bN]);
+    for(int i=0;i<cN;i++) 
+      std::swap(c_indices[i],c_indices[rand32()%cN]);
+  }
+ 
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,c_indices,cN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,1,a_indices,aN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,2,b_indices,bN));
+
+  //Enable policy for dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xfunc(handle,x_c,x_a,x_b,N));
- 
+
+  //disable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+
   uint32_t words;
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,cN));
   
   ASSERT_LE(words,climbs);
-  
   //import to mpz
   #pragma omp parallel for
   for(int i=0;i<aN;i++) mpz_import(g_a[i],alimbs,-1,sizeof(uint32_t),-1,0,&h_a[i*alimbs]);
@@ -1259,40 +1606,48 @@ TEST_P(genericTwoInOneOutTest,opTests) {
   //perform operation on the host
   #pragma omp parallel for
   for(int i=0;i<N;i++) {
-    mpz_t *cc=&g_c[i], *aa, *bb;
-    aa= &g_a[i % aN]; 
-    bb= &g_b[i % bN]; 
+    mpz_t *cc=&g_c[c_indices[i]], *aa, *bb;
+    aa= &g_a[a_indices[i%aN] % aN]; 
+    bb= &g_b[b_indices[i%bN] % bN]; 
     gfunc(*cc,*aa,*bb);
   }
 
+  //perform operation on the host
   size_t gwords;
   //export from gmp
   #pragma omp parallel for
-  for(int i=0;i<N;i++) mpz_export(&h_res[i*hlimbs],&gwords,-1,sizeof(uint32_t),-1,0,g_c[i]);
+  for(int i=0;i<N;i++) mpz_export(&h_res[c_indices[i]*hlimbs],&gwords,-1,sizeof(uint32_t),-1,0,g_c[c_indices[i]]);
   
   ASSERT_LE(gwords,alimbs+blimbs);
 
   ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
-  
   //compare results
   for(int i=0;i<N;i++) {
     for(int j=0;j<climbs;j++) {
-      ASSERT_EQ(h_res[i*hlimbs+j],d_res[i*climbs+j]);
+      ASSERT_EQ(h_res[c_indices[i]*hlimbs+j],d_res[c_indices[i]*climbs+j]);
     }
   }
 
+  //in place tests
   if(aN==cN && aP==cP) {
+    //Enable policy for dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+    
     //perform operation the device
     ASSERT_EQ(xmpErrorSuccess,xfunc(handle,x_a,x_a,x_b,N));
+  
+    //disable dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
  
     //export from xmp
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,N));
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,aN));
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
-  
+    ASSERT_EQ(climbs,words);
+
     //compare results
     for(int i=0;i<N;i++) {
       for(int j=0;j<climbs;j++) {
-        ASSERT_EQ(h_res[i*hlimbs+j],d_res[i*climbs+j]);
+        ASSERT_EQ(h_res[c_indices[i]*hlimbs+j],d_res[c_indices[i]*climbs+j]);
       }
     }
   }
@@ -1302,12 +1657,15 @@ TEST_P(genericTwoInOneOutTest,opTests) {
   for(int i=0;i<aN;i++) mpz_clear(g_a[i]);
   for(int i=0;i<bN;i++) mpz_clear(g_b[i]);
 
+  free(a_indices); free(b_indices); free(c_indices);
+
   free(h_a); free(h_b); free(h_res); free(d_res);
   free(g_c); free(g_a); free(g_b); 
 
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_c));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_a));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_b));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
   ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
 }
 
@@ -1325,8 +1683,10 @@ TEST_P(genericTwoInTwoOutTest,opTests) {
 
   //allocate xmp integers
   xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
   xmpIntegers_t x_c, x_d, x_a, x_b;
   ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
   
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_c,cP,cN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_d,dP,dN));
@@ -1372,46 +1732,82 @@ TEST_P(genericTwoInTwoOutTest,opTests) {
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,blimbs,-1,sizeof(uint32_t),-1,0,h_b,bN));
   
+  uint32_t *a_indices, *b_indices, *c_indices, *d_indices;
+  a_indices=(uint32_t*)malloc(aN*sizeof(uint32_t));
+  b_indices=(uint32_t*)malloc(bN*sizeof(uint32_t));
+  c_indices=(uint32_t*)malloc(cN*sizeof(uint32_t));
+  d_indices=(uint32_t*)malloc(dN*sizeof(uint32_t));
+
+  for(int i=0;i<aN;i++) a_indices[i]=i;
+  for(int i=0;i<bN;i++) b_indices[i]=i;
+  for(int i=0;i<cN;i++) c_indices[i]=i;
+  for(int i=0;i<dN;i++) d_indices[i]=i;
+
+  //generate random indices for a, b and c
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<aN;i++) 
+      std::swap(a_indices[i],a_indices[rand32()%aN]);
+    for(int i=0;i<bN;i++) 
+      std::swap(b_indices[i],b_indices[rand32()%bN]);
+    for(int i=0;i<cN;i++) 
+      std::swap(c_indices[i],c_indices[rand32()%cN]);
+    for(int i=0;i<dN;i++) 
+      std::swap(d_indices[i],d_indices[rand32()%dN]);
+  }
+  
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,c_indices,cN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,1,d_indices,dN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,2,a_indices,aN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,3,b_indices,bN));
+
+  //Enable policy for dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+  
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xfunc(handle,x_c,x_d,x_a,x_b,N));
-  
+ 
+  //disable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+ 
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_resc,NULL,-1,sizeof(uint32_t),-1,0,x_c,N));
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_resd,NULL,-1,sizeof(uint32_t),-1,0,x_d,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_resc,NULL,-1,sizeof(uint32_t),-1,0,x_c,cN));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_resd,NULL,-1,sizeof(uint32_t),-1,0,x_d,dN));
   
   //import to mpz
   #pragma omp parallel for
   for(int i=0;i<aN;i++) mpz_import(g_a[i],alimbs,-1,sizeof(uint32_t),-1,0,&h_a[i*alimbs]);
   #pragma omp parallel for
   for(int i=0;i<bN;i++) mpz_import(g_b[i],blimbs,-1,sizeof(uint32_t),-1,0,&h_b[i*blimbs]);
-
+  
   //perform operation on the host
   #pragma omp parallel for
   for(int i=0;i<N;i++) {
-    mpz_t *cc=&g_c[i], *aa, *bb, *dd=&g_d[i];
-    aa= &g_a[i % aN]; 
-    bb= &g_b[i % bN]; 
+    mpz_t *cc=&g_c[c_indices[i]], *aa, *bb, *dd=&g_d[d_indices[i]];
+    aa= &g_a[a_indices[i%aN] % aN]; 
+    bb= &g_b[b_indices[i%bN] % bN]; 
     gfunc(*cc,*dd,*aa,*bb);
   }
 
   //export from gmp
   #pragma omp parallel for
-  for(int i=0;i<N;i++) mpz_export(&h_resc[i*climbs],NULL,-1,sizeof(uint32_t),-1,0,g_c[i]);
+  for(int i=0;i<N;i++) mpz_export(&h_resc[c_indices[i]*climbs],NULL,-1,sizeof(uint32_t),-1,0,g_c[c_indices[i]]);
   
   #pragma omp parallel for
-  for(int i=0;i<N;i++) mpz_export(&h_resd[i*climbs],NULL,-1,sizeof(uint32_t),-1,0,g_d[i]);
+  for(int i=0;i<N;i++) mpz_export(&h_resd[d_indices[i]*climbs],NULL,-1,sizeof(uint32_t),-1,0,g_d[d_indices[i]]);
   
   ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
   
   //compare results
   for(int i=0;i<N;i++) {
     for(int j=0;j<climbs;j++) {
-      ASSERT_EQ(h_resc[i*climbs+j],d_resc[i*climbs+j]);
+      ASSERT_EQ(h_resc[c_indices[i]*climbs+j],d_resc[c_indices[i]*climbs+j]);
     }
   }
   for(int i=0;i<N;i++) {
     for(int j=0;j<dlimbs;j++) {
-      ASSERT_EQ(h_resd[i*dlimbs+j],d_resd[i*dlimbs+j]);
+      ASSERT_EQ(h_resd[d_indices[i]*dlimbs+j],d_resd[d_indices[i]*dlimbs+j]);
     }
   }
 
@@ -1421,6 +1817,8 @@ TEST_P(genericTwoInTwoOutTest,opTests) {
   for(int i=0;i<aN;i++) mpz_clear(g_a[i]);
   for(int i=0;i<bN;i++) mpz_clear(g_b[i]);
 
+  free(a_indices); free(b_indices); free(c_indices); free(d_indices); 
+
   free(h_a); free(h_b); free(h_resc); free(h_resd); free(d_resc); free(d_resd);
   free(g_c); free(g_d); free(g_a); free(g_b); 
 
@@ -1428,6 +1826,7 @@ TEST_P(genericTwoInTwoOutTest,opTests) {
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_d));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_a));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_b));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
   ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
 }
 
@@ -1440,8 +1839,10 @@ TEST_P(CmpTest,opTests) {
 
   //allocate xmp integers
   xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
   xmpIntegers_t x_a, x_b;
   ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
   
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_a,aP,aN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_b,bP,bN));
@@ -1477,22 +1878,48 @@ TEST_P(CmpTest,opTests) {
   //import to xmp
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,blimbs,-1,sizeof(uint32_t),-1,0,h_b,bN));
+  
+  uint32_t *a_indices, *b_indices;
+  a_indices=(uint32_t*)malloc(aN*sizeof(uint32_t));
+  b_indices=(uint32_t*)malloc(bN*sizeof(uint32_t));
+
+  for(int i=0;i<aN;i++) a_indices[i]=i;
+  for(int i=0;i<bN;i++) b_indices[i]=i;
+
+  //generate random indices for a, b and c
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<aN;i++) 
+      std::swap(a_indices[i],a_indices[rand32()%aN]);
+    for(int i=0;i<bN;i++) 
+      std::swap(b_indices[i],b_indices[rand32()%bN]);
+  }
+  
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,a_indices,aN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,1,b_indices,bN));
+
+  //Enable policy for dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCmpAsync(handle,d_res,x_a,x_b,N));
+
+  //disable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
  
   //import to mpz
   #pragma omp parallel for
   for(int i=0;i<aN;i++) mpz_import(g_a[i],alimbs,-1,sizeof(uint32_t),-1,0,&h_a[i*alimbs]);
   #pragma omp parallel for
   for(int i=0;i<bN;i++) mpz_import(g_b[i],blimbs,-1,sizeof(uint32_t),-1,0,&h_b[i*blimbs]);
-
+  
   //perform operation on the host
   #pragma omp parallel for
   for(int i=0;i<N;i++) {
     mpz_t *aa, *bb;
-    aa= &g_a[i % aN]; 
-    bb= &g_b[i % bN]; 
+    aa= &g_a[a_indices[i%aN] % aN]; 
+    bb= &g_b[b_indices[i%bN] % bN]; 
     h_res[i]=mpz_cmp(*aa,*bb);
   }
 
@@ -1506,12 +1933,15 @@ TEST_P(CmpTest,opTests) {
   //clean up
   for(int i=0;i<aN;i++) mpz_clear(g_a[i]);
   for(int i=0;i<bN;i++) mpz_clear(g_b[i]);
+  
+  free(a_indices); free(b_indices);
 
   free(h_a); free(h_b); free(h_res); free(d_res);
   free(g_a); free(g_b); 
 
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_a));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_b));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
   ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
 }
 
@@ -1523,8 +1953,10 @@ TEST_P(PopcTest,opTests) {
 
   //allocate xmp integers
   xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
   xmpIntegers_t x_a;
   ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
   
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_a,aP,aN));
 
@@ -1542,7 +1974,7 @@ TEST_P(PopcTest,opTests) {
 
   //allocate gmp integers
   mpz_t *g_a;
-
+  
   g_a=(mpz_t*)malloc(sizeof(mpz_t)*aN);
 
   for(int i=0;i<aN;i++) mpz_init(g_a[i]);
@@ -1554,19 +1986,40 @@ TEST_P(PopcTest,opTests) {
 
   //import to xmp
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
+  
+  uint32_t *a_indices;
+  a_indices=(uint32_t*)malloc(aN*sizeof(uint32_t));
+
+  for(int i=0;i<aN;i++) a_indices[i]=i;
+
+  //generate random indices for a, b and c
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<aN;i++) 
+      std::swap(a_indices[i],a_indices[rand32()%aN]);
+  }
+  
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,a_indices,aN));
+
+  //Enable policy for dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersPopcAsync(handle,d_res,x_a,N));
+
+  //disable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
  
   //import to mpz
   #pragma omp parallel for
   for(int i=0;i<aN;i++) mpz_import(g_a[i],alimbs,-1,sizeof(uint32_t),-1,0,&h_a[i*alimbs]);
-
+  
   //perform operation on the host
   #pragma omp parallel for
   for(int i=0;i<N;i++) {
     mpz_t *aa;
-    aa= &g_a[i % aN]; 
+    aa= &g_a[a_indices[i%aN] % aN]; 
     h_res[i]=mpz_popcount(*aa);
   }
 
@@ -1579,11 +2032,14 @@ TEST_P(PopcTest,opTests) {
 
   //clean up
   for(int i=0;i<aN;i++) mpz_clear(g_a[i]);
+  
+  free(a_indices);
 
   free(h_a); free(h_res); free(d_res);
   free(g_a); 
 
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_a));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
   ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
 }
 
@@ -1597,8 +2053,10 @@ TEST_P(SubTest,opTests) {
 
   //allocate xmp integers
   xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
   xmpIntegers_t x_c, x_a, x_b;
   ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
   
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_c,cP,cN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_a,aP,aN));
@@ -1638,25 +2096,56 @@ TEST_P(SubTest,opTests) {
   //import to xmp
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_b,blimbs,-1,sizeof(uint32_t),-1,0,h_b,bN));
+  
+  uint32_t *a_indices, *b_indices, *c_indices;
+  a_indices=(uint32_t*)malloc(aN*sizeof(uint32_t));
+  b_indices=(uint32_t*)malloc(bN*sizeof(uint32_t));
+  c_indices=(uint32_t*)malloc(cN*sizeof(uint32_t));
+
+  for(int i=0;i<aN;i++) a_indices[i]=i;
+  for(int i=0;i<bN;i++) b_indices[i]=i;
+  for(int i=0;i<cN;i++) c_indices[i]=i;
+
+  //generate random indices for a, b and c
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<aN;i++) 
+      std::swap(a_indices[i],a_indices[rand32()%aN]);
+    for(int i=0;i<bN;i++) 
+      std::swap(b_indices[i],b_indices[rand32()%bN]);
+    for(int i=0;i<cN;i++) 
+      std::swap(c_indices[i],c_indices[rand32()%cN]);
+  }
+ 
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,c_indices,cN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,1,a_indices,aN));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,2,b_indices,bN));
+
+  //Enable policy for dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
 
   //perform operation the device
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersSubAsync(handle,x_c,x_a,x_b,N));
+
+  //disable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
  
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_c,N));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_c,cN));
   
   //import to mpz
   #pragma omp parallel for
   for(int i=0;i<aN;i++) mpz_import(g_a[i],alimbs,-1,sizeof(uint32_t),-1,0,&h_a[i*alimbs]);
   #pragma omp parallel for
   for(int i=0;i<bN;i++) mpz_import(g_b[i],blimbs,-1,sizeof(uint32_t),-1,0,&h_b[i*blimbs]);
-
+  
   //perform operation on the host
   #pragma omp parallel for
   for(int i=0;i<N;i++) {
-    mpz_t *cc=&g_c[i], *aa, *bb, *tt=&g_t[i];
-    aa= &g_a[i % aN]; 
-    bb= &g_b[i % bN]; 
+    mpz_t *cc=&g_c[c_indices[i]], *aa, *bb, *tt=&g_t[i];
+    aa= &g_a[a_indices[i%aN] % aN]; 
+    bb= &g_b[b_indices[i%bN] % bN]; 
     mpz_sub(*cc,*aa,*bb);
     if(mpz_sgn(*cc)==-1) {
       mpz_set_ui(*tt,1);
@@ -1667,29 +2156,35 @@ TEST_P(SubTest,opTests) {
 
   //export from gmp
   #pragma omp parallel for
-  for(int i=0;i<N;i++) mpz_export(&h_res[i*climbs],NULL,-1,sizeof(uint32_t),-1,0,g_c[i]);
+  for(int i=0;i<N;i++) mpz_export(&h_res[c_indices[i]*climbs],NULL,-1,sizeof(uint32_t),-1,0,g_c[c_indices[i]]);
   
   ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
   
   //compare results
   for(int i=0;i<N;i++) {
     for(int j=0;j<climbs;j++) {
-      ASSERT_EQ(h_res[i*climbs+j],d_res[i*climbs+j]);
+      ASSERT_EQ(h_res[c_indices[i]*climbs+j],d_res[c_indices[i]*climbs+j]);
     }
   }
 
   if(cN==aN && cP==aP) {
+    //Enable policy for dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+    
     //perform operation the device
     ASSERT_EQ(xmpErrorSuccess,xmpIntegersSubAsync(handle,x_a,x_a,x_b,N));
+  
+    //disable dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
  
     //export from xmp
-    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_a,N));
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_a,aN));
   
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
     //compare results
     for(int i=0;i<N;i++) {
       for(int j=0;j<climbs;j++) {
-        ASSERT_EQ(h_res[i*climbs+j],d_res[i*climbs+j]);
+        ASSERT_EQ(h_res[c_indices[i]*climbs+j],d_res[c_indices[i]*climbs+j]);
       }
     }
   }
@@ -1699,6 +2194,8 @@ TEST_P(SubTest,opTests) {
   for(int i=0;i<aN;i++) mpz_clear(g_a[i]);
   for(int i=0;i<bN;i++) mpz_clear(g_b[i]);
   for(int i=0;i<N;i++) mpz_clear(g_t[i]);
+  
+  free(a_indices); free(b_indices); free(c_indices); 
 
   free(h_a); free(h_b); free(h_res); free(d_res);
   free(g_c); free(g_a); free(g_b), free(g_t); 
@@ -1706,6 +2203,7 @@ TEST_P(SubTest,opTests) {
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_c));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_a));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_b));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
   ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
 }
 
@@ -1965,7 +2463,7 @@ INSTANTIATE_TEST_CASE_P(AddTests, genericTwoInOneOutTest, ::testing::Values(
       SubParams(352,352,352,N,N,N,N),
       SubParams(384,384,384,N,N,N,N)
       ));
-
+ 
 
 INSTANTIATE_TEST_CASE_P(MulTests, genericTwoInOneOutTest, ::testing::Values( 
         TwoInOneOutParams(xmpIntegersMulAsync,mpz_mul,2*32,32,32,N,N,N,N),

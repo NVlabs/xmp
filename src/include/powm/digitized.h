@@ -82,7 +82,7 @@ namespace xmp {
 
       __device__ __forceinline__ void storeResult(uint32_t *window_data, uint32_t *out_data, int32_t out_len, int32_t out_stride) {
         DigitMP<size> WINDOW(false, false, window_data, (4+_window_size)*_digits);
-        DigitMP<size> CURRENT(WINDOW, _digits, _digits), OUT(false, false, out_data, out_len, out_stride, 0x7FFFFFFF);
+        DigitMP<size> CURRENT(WINDOW, _digits, _digits), OUT(false, false, out_data, out_len, out_stride, 0x7FFFFFFF, 0);
 
         set<size>(_registers, OUT, CURRENT);
       }

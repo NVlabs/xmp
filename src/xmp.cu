@@ -21,6 +21,10 @@ IN THE SOFTWARE.
 ***/
 #include "xmp_internal.h"
 #include "operators.h"
+#include <thrust/scan.h>
+#include <thrust/unique.h>
+#include <thrust/device_ptr.h>
+#include <thrust/execution_policy.h> 
 
 void *xmpDeviceMalloc(size_t bytes) {
   void* retval;
@@ -59,6 +63,7 @@ xmpError_t XMPAPI xmpHandleCreateWithMemoryFunctions(xmpHandle_t *handle,xmpAllo
   (*handle)->da=da;
   (*handle)->df=df;
 
+  (*handle)->policy=const_cast<xmpExecutionPolicy_t>(&xmpDefaultExecutionPolicy);
   
 
   if(cudaSuccess!=cudaGetDevice(&((*handle)->device)))
@@ -128,6 +133,7 @@ xmpError_t XMPAPI xmpHandleGetMemoryFunctions(xmpHandle_t handle, xmpAllocFunc *
 xmpError_t XMPAPI xmpHandleSetStream(xmpHandle_t handle, cudaStream_t stream) {
   //TODO check that the stream and handle device match (not supported in CUDA yet)
 
+  //TODO set dependcy between old stream and new stream
   handle->stream=stream;
 
   XMP_CHECK_CUDA();
@@ -152,6 +158,102 @@ xmpError_t XMPAPI xmpHandleGetDevice(xmpHandle_t handle, int32_t *device) {
   *device=handle->device;
 
   XMP_CHECK_CUDA();
+  return xmpErrorSuccess;
+}
+
+xmpError_t XMPAPI xmpHandleSetExecutionPolicy(xmpHandle_t handle, xmpExecutionPolicy_t policy) {
+  if(policy!=NULL)
+    handle->policy=policy;
+  else
+  handle->policy=const_cast<xmpExecutionPolicy_t>(&xmpDefaultExecutionPolicy);
+
+  return xmpErrorSuccess;
+}
+
+//creates an execution policy
+xmpError_t XMPAPI xmpExecutionPolicyCreate(xmpHandle_t handle, xmpExecutionPolicy_t *policy) {
+  XMP_CHECK_NE(policy,NULL);
+  XMP_SET_DEVICE(handle);
+  
+  //allocate policy
+  *policy=( _xmpExecutionPolicy_t*)handle->ha(sizeof(_xmpExecutionPolicy_t));
+  if(*policy==0)
+    return xmpErrorInvalidMalloc;
+ 
+  for(int i=0;i<XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS;i++)
+    (*policy)->indices[i]=NULL;
+
+  return xmpErrorSuccess;
+}
+//destroys an execution policy
+xmpError_t XMPAPI xmpExecutionPolicyDestroy(xmpHandle_t handle, xmpExecutionPolicy_t policy) {
+  XMP_SET_DEVICE(handle);
+
+  //free indices
+  for(int i=0;i<XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS;i++) {
+    if(policy->indices[i]!=NULL) 
+      handle->df(policy->indices[i]);
+  }
+
+  //free handle
+  handle->hf(policy);
+
+  XMP_CHECK_CUDA();
+  return xmpErrorSuccess;
+}
+
+//set dynamic indices
+xmpError_t XMPAPI xmpExecutionPolicySetIndicesAsync(xmpHandle_t handle, xmpExecutionPolicy_t policy, uint32_t which_integer, uint32_t *indices, uint32_t count) {
+  XMP_SET_DEVICE(handle);
+  
+  
+  if(which_integer>=XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS) {
+    return xmpErrorInvalidParameter;
+  }
+
+
+  uint32_t **pindices=&policy->indices[which_integer];
+  uint32_t *pcount=&policy->indices_count[which_integer];
+
+  //if the parameter is null clear existing indices
+  if(indices==NULL) {
+    if(*pindices!=NULL) {
+      handle->df(*pindices);
+      *pindices=NULL;
+    }
+  } else {
+    //if already allocated but a different size
+    if(*pindices!=NULL && *pcount!=count) {
+      //free old indices
+      handle->df(*pindices);
+      *pindices=NULL;
+    }
+
+    //if not allocated
+    if(*pindices==NULL) {
+      //allocate new indices
+      *pindices=(uint32_t*)handle->da(sizeof(uint32_t)*count);
+      *pcount=count;
+      if(*pindices==NULL)  
+        return xmpErrorInvalidCudaMalloc;
+    }
+
+    cudaMemcpyAsync(*pindices,indices,sizeof(uint32_t)*count,cudaMemcpyDefault,handle->stream);
+  
+    *pcount=count;
+  }
+
+
+  return xmpErrorSuccess;
+}
+  
+xmpError_t XMPAPI xmpExecutionPolicySetIndices(xmpHandle_t handle, xmpExecutionPolicy_t policy, uint32_t which_integer, uint32_t *indices, uint32_t count) {
+  xmpError_t error=xmpExecutionPolicySetIndicesAsync(handle,policy,which_integer,indices,count);
+  cudaStreamSynchronize(handle->stream);
+  return error;
+}
+
+xmpError_t XMPAPI xmpExecutionPolicySetParameter(xmpHandle_t handle, xmpExecutionPolicy_t policy, xmpExecutionPolicyParam_t param, xmpExecutionPolicyValue_t val) {
   return xmpErrorSuccess;
 }
 
@@ -228,6 +330,47 @@ xmpError_t XMPAPI xmpIntegersGetCount(xmpHandle_t handle, xmpIntegers_t x, uint3
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
 }
+#if 0
+//TODO delete these
+//set the dynamic array indices,  NULL = clear indices array
+xmpError_t XMPAPI xmpIntegersSetIndicesAsync(xmpHandle_t handle, xmpIntegers_t a, uint32_t *indices, uint32_t count) {
+
+  //if the parameter is null clear existing indices
+  if(indices==NULL) {
+    if(NULL!=a->indices) {
+      handle->df(a->indices);
+      a->indices=NULL;
+    }
+  } else {
+    //if already allocated but a different size
+    if(a->indices!=NULL && count!=a->indices_count) {
+      //free old indices
+      handle->df(a->indices);
+      a->indices=NULL;
+    }
+
+    //if not allocated
+    if(a->indices==NULL) {
+      //allocate new indices
+      a->indices=(uint32_t*)handle->da(sizeof(uint32_t)*count);
+      a->indices_count=count;
+      if(a->indices==NULL)  
+        return xmpErrorInvalidCudaMalloc;
+    }
+
+    cudaMemcpyAsync(a->indices,indices,sizeof(uint32_t)*count,cudaMemcpyDefault,handle->stream);
+  }
+
+  a->indices_count=count;
+  return xmpErrorSuccess;
+}
+
+xmpError_t XMPAPI xmpIntegersSetIndices(xmpHandle_t handle, xmpIntegers_t a, uint32_t *indices, uint32_t count) {
+  xmpError_t error=xmpIntegersSetIndicesAsync(handle,a,indices,count);
+  cudaStreamSynchronize(handle->stream);
+  return error;
+}
+#endif
 
 int32_t query_endianess() {
   int32_t num=1;
@@ -301,13 +444,18 @@ void printWordsCompact(xmpLimb_t* data, int limbs, int count) {
 
 //transforms an array of data.  Can reverse the order, endian, and zero out the top nails bits of each word.
 template<class word_t>
-__global__ void xmpTransform(word_t *output, word_t *input, uint32_t count, uint32_t words, int32_t order, int32_t endian, uint32_t nails) {
+__global__ void xmpTransform(word_t *output, word_t *input, uint32_t count, uint32_t words, int32_t order, int32_t endian, uint32_t nails, uint32_t *out_indices, uint32_t *in_indices, uint32_t out_indices_count, uint32_t in_indices_count) {
   for(uint32_t i=blockIdx.y*blockDim.y+threadIdx.y;i<count;i+=blockDim.y*gridDim.y) {
     for(uint32_t j=blockIdx.x*blockDim.x+threadIdx.x;j<words;j+=blockDim.x*gridDim.x) {
       
+      uint32_t in_idx=i, out_idx=i;
+
+      if(NULL!=out_indices) out_idx=out_indices[out_idx%out_indices_count];
+      if(NULL!=in_indices) in_idx=in_indices[in_idx%in_indices_count];
+
       //Read in the order we want to store
       uint32_t offset= (order==xmpNativeOrder) ? j : words-j-1;
-      uint32_t idx=i*words + offset;
+      uint32_t idx=in_idx*words + offset;
 
       //read word
       word_t w=input[idx];
@@ -320,7 +468,7 @@ __global__ void xmpTransform(word_t *output, word_t *input, uint32_t count, uint
       w&=mask;
       
       //write in least significant first ordering
-      output[i*words+j]=w;
+      output[out_idx*words+j]=w;
     }
   }
 }
@@ -328,6 +476,8 @@ __global__ void xmpTransform(word_t *output, word_t *input, uint32_t count, uint
 
 xmpError_t inline xmpIntegersImportInternal(xmpHandle_t handle, xmpIntegers_t out, uint32_t words, int32_t order, size_t size, int32_t endian, int32_t nails, void* in, uint32_t count, bool async) {
   XMP_CHECK_NE(in,NULL);
+
+  xmpExecutionPolicy_t policy=handle->policy;
 
   //verify handle device and out device match
   int32_t device=handle->device;
@@ -348,12 +498,11 @@ xmpError_t inline xmpIntegersImportInternal(xmpHandle_t handle, xmpIntegers_t ou
     return xmpErrorInvalidPrecision;
 
   size_t bytes=count*words*size;
-  if(endian==xmpNativeEndian && order==xmpNativeOrder && nails==0) {
-    //common case, count & precision match, little endian, nails=0, no temporary memory needed just copy in
+  if(endian==xmpNativeEndian && order==xmpNativeOrder && nails==0 && policy->indices[0]==NULL) {
+    //common case, count & precision match, little endian, nails=0, no dynamic indexing,  no temporary memory needed just copy in
     if(cudaSuccess!=cudaMemcpyAsync(out->climbs,in,bytes,cudaMemcpyDefault,handle->stream))
       return xmpErrorCuda;
   } else {
-
     //check if we know where this pointer came from, if not assume host
     cudaPointerAttributes attrib;
     cudaError_t error=cudaPointerGetAttributes(&attrib,in);
@@ -390,16 +539,16 @@ xmpError_t inline xmpIntegersImportInternal(xmpHandle_t handle, xmpIntegers_t ou
     //unpack from temporary memory
     switch(size) {
       case 1:
-        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint8_t*)out->climbs,(uint8_t*)src,count,words,order,endian,nails);
+        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint8_t*)out->climbs,(uint8_t*)src,count,words,order,endian,nails,NULL,policy->indices[0],NULL,policy->indices_count[0]);
         break;
       case 2:
-        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint16_t*)out->climbs,(uint16_t*)src,count,words,order,endian,nails);
+        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint16_t*)out->climbs,(uint16_t*)src,count,words,order,endian,nails,NULL,policy->indices[0],NULL,policy->indices_count[0]);
         break;
       case 4:
-        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint32_t*)out->climbs,(uint32_t*)src,count,words,order,endian,nails);
+        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint32_t*)out->climbs,(uint32_t*)src,count,words,order,endian,nails,NULL,policy->indices[0],NULL,policy->indices_count[0]);
         break;
       case 8:
-        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint64_t*)out->climbs,(uint64_t*)src,count,words,order,endian,nails);
+        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint64_t*)out->climbs,(uint64_t*)src,count,words,order,endian,nails,NULL,policy->indices[0],NULL,policy->indices_count[0]);
         break;
       default:
         return xmpErrorInvalidParameter;
@@ -422,6 +571,8 @@ xmpError_t XMPAPI xmpIntegersImportAsync(xmpHandle_t handle, xmpIntegers_t out, 
 xmpError_t inline xmpIntegersExportInternal(xmpHandle_t handle, void* out, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in, uint32_t count, bool async) {
   XMP_CHECK_NE(out,NULL);
 
+  xmpExecutionPolicy_t policy=handle->policy;
+  
   //verify handle device and in device match
   int32_t device=handle->device;
   if(in->device!=device)
@@ -443,8 +594,8 @@ xmpError_t inline xmpIntegersExportInternal(xmpHandle_t handle, void* out, uint3
   uint32_t limbs=in->nlimbs;
   uint32_t w = limbs * (uint32_t)sizeof(xmpLimb_t) / size;
   size_t bytes=count*limbs*sizeof(xmpLimb_t);
-  if(endian==xmpNativeEndian && order==xmpNativeOrder && nails==0) {
-    //common case, naitve endian and order, , nails=0, no temporary memory needed just copy in
+  if(endian==xmpNativeEndian && order==xmpNativeOrder && nails==0  && policy->indices[0]==NULL) {
+    //common case, naitve endian and order, , nails=0, no dynamic indexing, no temporary memory needed just copy in
     if(cudaSuccess!=cudaMemcpyAsync(out,in->climbs,bytes,cudaMemcpyDefault,handle->stream))
       return xmpErrorCuda;
   } else {
@@ -479,16 +630,16 @@ xmpError_t inline xmpIntegersExportInternal(xmpHandle_t handle, void* out, uint3
     //pack to temporary memory
     switch(size) {
       case 1:
-        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint8_t*)dst,(uint8_t*)in->climbs,count,w,order,endian,nails);
+        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint8_t*)dst,(uint8_t*)in->climbs,count,w,order,endian,nails,policy->indices[0],NULL,policy->indices_count[0],NULL);
         break;
       case 2:
-        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint16_t*)dst,(uint16_t*)in->climbs,count,w,order,endian,nails);
+        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint16_t*)dst,(uint16_t*)in->climbs,count,w,order,endian,nails,policy->indices[0],NULL,policy->indices_count[0],NULL);
         break;
       case 4:
-        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint32_t*)dst,(uint32_t*)in->climbs,count,w,order,endian,nails);
+        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint32_t*)dst,(uint32_t*)in->climbs,count,w,order,endian,nails,policy->indices[0],NULL,policy->indices_count[0],NULL);
         break;
       case 8:
-        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint64_t*)dst,(uint64_t*)in->climbs,count,w,order,endian,nails);
+        xmpTransform<<<blocks,threads,0,handle->stream>>>((uint64_t*)dst,(uint64_t*)in->climbs,count,w,order,endian,nails,policy->indices[0],NULL,policy->indices_count[0],NULL);
         break;
       default:
         return xmpErrorInvalidParameter;
@@ -514,6 +665,41 @@ xmpError_t XMPAPI xmpIntegersExport(xmpHandle_t handle, void* out, uint32_t *wor
 xmpError_t XMPAPI xmpIntegersExportAsync(xmpHandle_t handle, void* out, uint32_t *words, int32_t order, size_t size, int32_t endian, uint32_t nails, xmpIntegers_t in, uint32_t count) {
   return xmpIntegersExportInternal(handle,out,words,order,size,endian,nails,in,count,true);
 }
+
+
+struct ReorderParams {
+  uint32_t *out_limbs, *in_limbs;             //limb data
+  uint32_t *out_indices, *in_indices;             //index arrays
+  uint32_t out_indices_count, in_indices_count;   //index array count length
+  uint32_t in_count;                          //actual length of the integer array
+  uint32_t out_words, in_words;               //precision 
+  uint32_t count;                             //number of elements to copy
+};
+__global__ void xmpReorder_compact_kernel(ReorderParams params) {
+  uint32_t count=           params.count;
+  uint32_t *in_index=       params.in_indices;
+  uint32_t in_index_count=  params.in_indices_count;
+  uint32_t in_count=        params.in_count;
+  uint32_t *in_limbs=       params.in_limbs;
+  uint32_t  in_words=       params.in_words;
+  uint32_t *out_index=      params.out_indices;
+  uint32_t out_index_count= params.out_indices_count;
+  uint32_t *out_limbs=      params.out_limbs;
+  uint32_t  out_words=      params.out_words;
+
+
+  for(int idx=blockIdx.y*blockDim.y+threadIdx.y;idx<count;idx+=blockDim.y*gridDim.y) {
+    for(int j=blockIdx.x*blockDim.x+threadIdx.x;j<out_words;j+=blockDim.x*gridDim.x) {
+      uint32_t i= (NULL==in_index) ? idx : in_index[idx%in_index_count]%in_count;
+      uint32_t o= (NULL==out_index) ? idx : out_index[idx%out_index_count];
+      //read with indirection
+      uint32_t val = (j<in_words) ? in_limbs[i*in_words+j] : 0;
+      //write with indirection
+      out_limbs[o*out_words+j]=val;
+    }
+  }
+}
+
 
 xmpError_t XMPAPI xmpIntegersSet(xmpHandle_t handle, xmpIntegers_t out, xmpIntegers_t in, uint32_t count) {
   xmpError_t error=xmpIntegersSetAsync(handle,out,in,count);
@@ -542,35 +728,74 @@ xmpError_t XMPAPI xmpIntegersSetAsync(xmpHandle_t handle, xmpIntegers_t out, xmp
     return xmpErrorInvalidCount;
   
   size_t bytes=in->count*in->nlimbs*sizeof(xmpLimb_t);
+  size_t sbytes=in->count*in->stride*sizeof(xmpLimb_t);
+  
+  xmpExecutionPolicy_t policy=handle->policy;
 
-  xmpFormat_t format=in->getFormat();
+  if(policy->indices[0]==NULL && policy->indices[1]==NULL) {
+    xmpFormat_t format=in->getFormat();
 
-  switch(format) {
-    case xmpFormatCompact:
-      if(cudaSuccess!=cudaMemcpyAsync(out->climbs,in->climbs,bytes,cudaMemcpyDefault,handle->stream))
-        return xmpErrorCuda;
-      break;
-    case xmpFormatStrided:
-      if(cudaSuccess!=cudaMemcpyAsync(out->slimbs,in->slimbs,bytes,cudaMemcpyDefault,handle->stream))
-        return xmpErrorCuda;
-      break;
-    case xmpFormatBoth:
-      if(cudaSuccess!=cudaMemcpyAsync(out->climbs,in->climbs,bytes,cudaMemcpyDefault,handle->stream))
-        return xmpErrorCuda;
-      if(cudaSuccess!=cudaMemcpyAsync(out->slimbs,in->slimbs,bytes,cudaMemcpyDefault,handle->stream))
-        return xmpErrorCuda;
-      break;
-    case xmpFormatNone:
-      return xmpErrorInvalidFormat;
+    switch(format) {
+      case xmpFormatCompact:
+        if(cudaSuccess!=cudaMemcpyAsync(out->climbs,in->climbs,bytes,cudaMemcpyDefault,handle->stream))
+          return xmpErrorCuda;
+        break;
+      case xmpFormatStrided:
+        if(cudaSuccess!=cudaMemcpyAsync(out->slimbs,in->slimbs,sbytes,cudaMemcpyDefault,handle->stream))
+          return xmpErrorCuda;
+        break;
+      case xmpFormatBoth:
+        if(cudaSuccess!=cudaMemcpyAsync(out->climbs,in->climbs,bytes,cudaMemcpyDefault,handle->stream))
+          return xmpErrorCuda;
+        if(cudaSuccess!=cudaMemcpyAsync(out->slimbs,in->slimbs,sbytes,cudaMemcpyDefault,handle->stream))
+          return xmpErrorCuda;
+        break;
+      case xmpFormatNone:
+        return xmpErrorInvalidFormat;
+    }
+    out->setFormat(format);
+  } else {
+    //currently only support working in compact format
+    in->requireFormat(handle,xmpFormatCompact);
+
+    //create scratch memory (handles, different devices and in-place transfers)
+    xmpError_t e=xmpSetNecessaryScratchSize(handle,in->nlimbs*count*sizeof(xmpLimb_t));
+    if(e!=xmpErrorSuccess) return e;
+    uint32_t *dst=(uint32_t*)handle->scratch;
+
+    //copy to temporary memory on target device
+    if(cudaSuccess!=cudaMemcpyAsync(dst, in->climbs, bytes, cudaMemcpyDefault, handle->stream)) {
+      return xmpErrorCuda;
+    }
+
+    ReorderParams params;
+
+    params.out_limbs=out->climbs;
+    params.out_indices=policy->indices[0];
+    params.out_indices_count=policy->indices_count[0];
+    params.in_limbs=dst;
+    params.in_indices=policy->indices[1];
+    params.in_indices_count=policy->indices_count[1];
+    params.in_count=in->count;
+    params.out_words=out->nlimbs;
+    params.in_words=in->nlimbs;
+    params.count=count;
+    
+    dim3 blocks, threads;
+
+    threads.x=MIN(out->nlimbs,128);       //1 thread per limb, max of 128
+    threads.y=DIV_ROUND_UP(128,threads.x);  //target block size is 128, fill in block size with instances if necessary
+    blocks.x=DIV_ROUND_UP(out->nlimbs,threads.x);  //remaining limbs get covered in multiple blocks
+    blocks.y=DIV_ROUND_UP(out->count,threads.y);    //handle remainig instances with more blocks
+
+    xmpReorder_compact_kernel<<<blocks,threads>>>(params);
+
+    out->setFormat(xmpFormatCompact);
   }
-  out->setFormat(format);
 
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
 }
-
-
-
 
 //x along N
 //y along limbs

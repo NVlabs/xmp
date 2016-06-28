@@ -26,6 +26,9 @@ IN THE SOFTWARE.
 struct one_argument {
   xmpLimb_t *out_data;
   xmpLimb_t *a_data;
+  uint32_t  *a_indices;
+  uint32_t  *out_indices;
+  uint32_t   a_indices_count;
   int32_t    out_len;
   int32_t    out_stride;
   int32_t    a_len;
@@ -37,6 +40,11 @@ struct two_arguments {
   xmpLimb_t *out_data;
   xmpLimb_t *a_data;
   xmpLimb_t *b_data;
+  uint32_t  *a_indices;
+  uint32_t  *b_indices;
+  uint32_t  *out_indices;
+  uint32_t   a_indices_count;
+  uint32_t   b_indices_count;
   int32_t    out_len;
   int32_t    out_stride;
   int32_t    a_len;
@@ -52,6 +60,11 @@ struct division_arguments {
   xmpLimb_t *a_data;
   xmpLimb_t *b_data;
   xmpLimb_t *scratch;
+  uint32_t  *a_indices;
+  uint32_t  *b_indices;
+  uint32_t  *out_indices;
+  uint32_t   a_indices_count;
+  uint32_t   b_indices_count;
   int32_t    out_len;
   int32_t    out_stride;
   int32_t    a_len;
@@ -68,6 +81,12 @@ struct divmod_arguments {
   xmpLimb_t *a_data;
   xmpLimb_t *b_data;
   xmpLimb_t *scratch;
+  uint32_t  *a_indices;
+  uint32_t  *b_indices;
+  uint32_t  *q_indices;
+  uint32_t  *r_indices;
+  uint32_t  a_indices_count;
+  uint32_t  b_indices_count;
   int32_t    q_len;
   int32_t    q_stride;
   int32_t    m_len;
@@ -84,6 +103,10 @@ struct ar_arguments {
   xmpLimb_t *window_data;
   xmpLimb_t *a_data;
   xmpLimb_t *mod_data;
+  uint32_t *a_indices;
+  uint32_t *mod_indices;
+  uint32_t  a_indices_count;
+  uint32_t  mod_indices_count;
   int32_t    window_bits;
   int32_t    a_len;
   int32_t    a_stride;
@@ -97,6 +120,9 @@ struct powm_arguments {
   xmpLimb_t *out_data;
   xmpLimb_t *exp_data;
   xmpLimb_t *window_data;
+  uint32_t  *exp_indices;
+  uint32_t  *out_indices;
+  uint32_t   exp_indices_count;
   int32_t    out_len;
   int32_t    out_stride;
   int32_t    exp_stride;
@@ -111,6 +137,10 @@ struct cmp_arguments {
   int32_t   *out_data;
   xmpLimb_t *a_data;
   xmpLimb_t *b_data;
+  uint32_t  *a_indices;
+  uint32_t  *b_indices;
+  uint32_t   a_indices_count;
+  uint32_t   b_indices_count;
   int32_t    a_len;
   int32_t    a_stride;
   int32_t    a_count;
@@ -123,6 +153,9 @@ struct cmp_arguments {
 struct shf_arguments {
   xmpLimb_t *out_data;
   xmpLimb_t *a_data;
+  uint32_t  *a_indices;
+  uint32_t  *out_indices;
+  uint32_t   a_indices_count;
   int32_t   *shift_data;
   int32_t    out_len;
   int32_t    out_stride;
@@ -135,6 +168,9 @@ struct shf_arguments {
 struct popc_arguments {
   uint32_t  *out_data;
   xmpLimb_t *a_data;
+  uint32_t  *a_indices;
+  uint32_t  *out_indices;
+  uint32_t   a_indices_count;
   int32_t    a_len;
   int32_t    a_stride;
   int32_t    a_count;
