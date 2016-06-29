@@ -900,6 +900,27 @@ struct ShfParams {
 ::std::ostream& operator<<(::std::ostream& os, ShfParams params) {
     return os << params.DebugString(); 
 }
+struct SqrParams {
+  uint32_t N1, N2, N;
+  uint32_t P1, P2;
+
+  SqrParams(uint32_t P1, uint32_t P2, 
+            uint32_t N1, uint32_t N2, uint32_t N) 
+            : P1(P1), P2(P2), N1(N1), N2(N2), N(N) {}
+  std::string DebugString() {
+    std::stringstream s;
+    s << "N1: " << N1 << " ";
+    s << "N2: " << N2 << " ";
+    s << "N: " << N << " ";
+    s << "P1: " << P1 << " ";
+    s << "P2: " << P2 << " ";
+    return s.str();
+  }
+};
+::std::ostream& operator<<(::std::ostream& os, SqrParams params) {
+    return os << params.DebugString(); 
+}
+
 
 struct TwoInOneOutParams {
   uint32_t N1, N2, N3, N;
@@ -1068,6 +1089,7 @@ class CmpTest : public ::testing::TestWithParam<CmpParams> {};
 class PopcTest : public ::testing::TestWithParam<PopcParams> {};
 class NotTest : public ::testing::TestWithParam<NotParams> {};
 class ShfTest : public ::testing::TestWithParam<ShfParams> {};
+class SqrTest : public ::testing::TestWithParam<SqrParams> {};
 class genericTwoInOneOutTest : public ::testing::TestWithParam<TwoInOneOutParams> {};
 class genericTwoInTwoOutTest : public ::testing::TestWithParam<TwoInTwoOutParams> {};
 
@@ -1496,6 +1518,147 @@ TEST_P(NotTest,opTests) {
 
   free(a_indices); free(c_indices);
   free(h_a); free(d_res);
+
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_c));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_a));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyDestroy(handle,policy));
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleDestroy(handle));
+}
+
+TEST_P(SqrTest,opTests) {
+  SqrParams p=GetParam();
+  uint32_t cN=p.N1, aN=p.N2, N=p.N;
+  uint32_t cP=p.P1, aP=p.P2;
+  uint32_t climbs=cP/(8*sizeof(uint32_t));
+  uint32_t alimbs=aP/(8*sizeof(uint32_t));
+  uint32_t hlimbs=alimbs*2;
+ 
+  //allocate xmp integers
+  xmpHandle_t handle;
+  xmpExecutionPolicy_t policy;
+  xmpIntegers_t x_c, x_a;
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
+  
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_c,cP,cN));
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_a,aP,aN));
+
+  //allocate memory on hosts
+  uint32_t *h_a;
+  uint32_t *h_res, *d_res;
+  h_a=(uint32_t*)malloc(sizeof(uint32_t)*aN*alimbs);
+  h_res=(uint32_t*)malloc(sizeof(uint32_t)*N*hlimbs);
+  d_res=(uint32_t*)malloc(sizeof(uint32_t)*N*climbs);
+
+  //intitialize resutls to 0 as gmp may not write all of the bits 
+  memset(h_res,0,sizeof(uint32_t)*N*hlimbs);
+  memset(d_res,0,sizeof(uint32_t)*N*climbs);
+
+  //allocate gmp integers
+  mpz_t *g_c, *g_a;
+
+  g_c=(mpz_t*)malloc(sizeof(mpz_t)*cN);
+  g_a=(mpz_t*)malloc(sizeof(mpz_t)*aN);
+
+  for(int i=0;i<cN;i++) mpz_init(g_c[i]);
+  for(int i=0;i<aN;i++) mpz_init(g_a[i]);
+
+  //generate random data on host
+  srand(0);
+
+  for(int i=0;i<aN*alimbs;i++) h_a[i]=rand32();
+
+  //import to xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersImportAsync(handle,x_a,alimbs,-1,sizeof(uint32_t),-1,0,h_a,aN));
+  
+  uint32_t *c_indices;
+  c_indices=(uint32_t*)malloc(cN*sizeof(uint32_t));
+
+  for(int i=0;i<cN;i++) c_indices[i]=i;
+
+  //generate random indices for a, b and c
+  //shuffle indices
+  for(int j=0;j<10;j++) {
+    for(int i=0;i<cN;i++) 
+      std::swap(c_indices[i],c_indices[rand32()%cN]);
+  }
+ 
+  //set indices in xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetIndices(handle,policy,0,c_indices,cN));
+
+  //Enable policy for dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+  //perform operation the device
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersMul(handle,x_c,x_a,x_a,N));
+
+  //disable dynamic indexing
+  ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+
+  uint32_t words;
+  //export from xmp
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_c,cN));
+  
+  ASSERT_LE(words,climbs);
+  //import to mpz
+  #pragma omp parallel for
+  for(int i=0;i<aN;i++) mpz_import(g_a[i],alimbs,-1,sizeof(uint32_t),-1,0,&h_a[i*alimbs]);
+
+  //perform operation on the host
+  #pragma omp parallel for
+  for(int i=0;i<N;i++) {
+    mpz_t *cc=&g_c[c_indices[i]], *aa;
+    aa= &g_a[i % aN]; 
+    mpz_mul(*cc,*aa,*aa);
+  }
+
+  //perform operation on the host
+  size_t gwords;
+  //export from gmp
+  #pragma omp parallel for
+  for(int i=0;i<N;i++) mpz_export(&h_res[c_indices[i]*hlimbs],&gwords,-1,sizeof(uint32_t),-1,0,g_c[c_indices[i]]);
+  
+  ASSERT_LE(gwords,hlimbs);
+
+  ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
+  //compare results
+  for(int i=0;i<N;i++) {
+    for(int j=0;j<climbs;j++) {
+      ASSERT_EQ(h_res[c_indices[i]*hlimbs+j],d_res[c_indices[i]*climbs+j]);
+    }
+  }
+
+  //in place tests
+  if(aN==cN && aP==cP) {
+    //Enable policy for dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,policy));
+    
+    //perform operation the device
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersMul(handle,x_a,x_a,x_a,N));
+  
+    //disable dynamic indexing
+    ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
+ 
+    //export from xmp
+    ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&words,-1,sizeof(uint32_t),-1,0,x_a,aN));
+    ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
+    ASSERT_EQ(climbs,words);
+
+    //compare results
+    for(int i=0;i<N;i++) {
+      for(int j=0;j<climbs;j++) {
+        ASSERT_EQ(h_res[c_indices[i]*hlimbs+j],d_res[c_indices[i]*climbs+j]);
+      }
+    }
+  }
+
+  //clean up
+  for(int i=0;i<cN;i++) mpz_clear(g_c[i]);
+  for(int i=0;i<aN;i++) mpz_clear(g_a[i]);
+
+  free(c_indices);
+
+  free(h_a); free(h_res); free(d_res);
+  free(g_c); free(g_a); 
 
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_c));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersDestroy(handle,x_a));
@@ -2249,6 +2412,32 @@ INSTANTIATE_TEST_CASE_P(ShfTests, ShfTest, ::testing::Values(
         ShfParams(320,320,N,N,N,N),
         ShfParams(352,352,N,N,N,N),
         ShfParams(384,384,N,N,N,N)
+      ));
+INSTANTIATE_TEST_CASE_P(SqrTests, SqrTest, ::testing::Values( 
+        SqrParams(32,32,N,N,N),
+        SqrParams(64,64,N,N,N),
+        SqrParams(128,128,N,N,N),
+        SqrParams(256,256,N,N,N),
+        SqrParams(512,512,N,N,N),
+        
+        SqrParams(64,32,N,N,N),
+        SqrParams(128,64,N,N,N),
+        SqrParams(256,128,N,N,N),
+        SqrParams(512,256,N,N,N),
+      
+        SqrParams(32,32,N,M,N),
+        SqrParams(64,64,N,M,N),
+        SqrParams(128,128,N,M,N),
+        SqrParams(256,256,N,M,N),
+        SqrParams(512,512,N,M,N),
+      
+        SqrParams(160,160,N,N,N),
+        SqrParams(192,192,N,N,N),
+        SqrParams(224,224,N,N,N),
+        SqrParams(288,288,N,N,N),
+        SqrParams(320,320,N,N,N),
+        SqrParams(352,352,N,N,N),
+        SqrParams(384,384,N,N,N)
       ));
 INSTANTIATE_TEST_CASE_P(NotTests, NotTest, ::testing::Values( 
         NotParams(32,32,N,N,N),
