@@ -78,6 +78,14 @@ xmpError_t XMPAPI xmpIntegersAddAsync(xmpHandle_t handle, xmpIntegers_t s, const
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
+  
+  xmpAlgorithm_t alg = policy->algorithm;
+  if(alg==xmpAlgorithmDefault) {
+    if(a->precision<=512 && b->precision<=512) 
+      alg = xmpAlgorithmRegMP;
+    else
+      alg = xmpAlgorithmDigitMP;  
+  }
 
   // package up the arguments
   add_arguments.out_data=s->slimbs;
@@ -109,26 +117,38 @@ xmpError_t XMPAPI xmpIntegersAddAsync(xmpHandle_t handle, xmpIntegers_t s, const
     add_arguments.out_data=(xmpLimb_t*)handle->scratch;
   }
 
-  if(a->precision<=128 && b->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_add_kernel<GSL, 4>);
-    regmp_add_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
+  if(alg==xmpAlgorithmRegMP)  {
+    if(a->precision<=128 && b->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_add_kernel<GSL, 4>);
+      regmp_add_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=256 && b->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_add_kernel<GSL, 8>);
+      regmp_add_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=384 && b->precision<=384) {
+      configureActiveBlocks(handle, blocks, threads, regmp_add_kernel<GSL, 12>);
+      regmp_add_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=512 && b->precision<=512) {
+      configureActiveBlocks(handle, blocks, threads, regmp_add_kernel<GSL, 16>);
+      regmp_add_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
+      goto done;
+    }
   }
-  else if(a->precision<=256 && b->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_add_kernel<GSL, 8>);
-    regmp_add_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
-  }
-  else if(a->precision<=384 && b->precision<=384) {
-    configureActiveBlocks(handle, blocks, threads, regmp_add_kernel<GSL, 12>);
-    regmp_add_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
-  }
-  else if(a->precision<=512 && b->precision<=512) {
-    configureActiveBlocks(handle, blocks, threads, regmp_add_kernel<GSL, 16>);
-    regmp_add_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
-  }
-  else {
+  else if(alg==xmpAlgorithmDigitMP) {
     configureActiveBlocks(handle, blocks, threads, digitmp_add_kernel<GSL, DIGIT>);
     digitmp_add_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(add_arguments, count);
+    goto done;
   }
+
+  //this is only reached if they requested an unsupported algorithm
+  return xmpErrorUnsupported;
+
+done:
 
   if(inplace) {
     cudaMemcpyAsync(s->slimbs,add_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
@@ -175,6 +195,14 @@ xmpError_t XMPAPI xmpIntegersSubAsync(xmpHandle_t handle, xmpIntegers_t d, const
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
+  
+  xmpAlgorithm_t alg = policy->algorithm;
+  if(alg==xmpAlgorithmDefault) {
+    if(a->precision<=512 && b->precision<512) 
+      alg = xmpAlgorithmRegMP;
+    else
+      alg = xmpAlgorithmDigitMP;  
+  }
 
   // package up the arguments
   sub_arguments.out_data=d->slimbs;
@@ -206,27 +234,36 @@ xmpError_t XMPAPI xmpIntegersSubAsync(xmpHandle_t handle, xmpIntegers_t d, const
     sub_arguments.out_data=(xmpLimb_t*)handle->scratch;
   }
 
-  if(a->precision<=128 && b->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_sub_kernel<GSL, 4>);
-    regmp_sub_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
+  if(alg==xmpAlgorithmRegMP) {
+    if(a->precision<=128 && b->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_sub_kernel<GSL, 4>);
+      regmp_sub_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=256 && b->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_sub_kernel<GSL, 8>);
+      regmp_sub_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=384 && b->precision<=384) {
+      configureActiveBlocks(handle, blocks, threads, regmp_sub_kernel<GSL, 12>);
+      regmp_sub_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=512 && b->precision<=512) {
+      configureActiveBlocks(handle, blocks, threads, regmp_sub_kernel<GSL, 16>);
+      regmp_sub_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
+      goto done;
+    }
   }
-  else if(a->precision<=256 && b->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_sub_kernel<GSL, 8>);
-    regmp_sub_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
-  }
-  else if(a->precision<=384 && b->precision<=384) {
-    configureActiveBlocks(handle, blocks, threads, regmp_sub_kernel<GSL, 12>);
-    regmp_sub_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
-  }
-  else if(a->precision<=512 && b->precision<=512) {
-    configureActiveBlocks(handle, blocks, threads, regmp_sub_kernel<GSL, 16>);
-    regmp_sub_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
-  }
-  else {
+  else if(alg==xmpAlgorithmDigitMP){
     configureActiveBlocks(handle, blocks, threads, digitmp_sub_kernel<GSL, DIGIT>);
     digitmp_sub_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(sub_arguments, count);
+    goto done;
   }
-
+  //this is only reached if they requested an unsupported algorithm
+  return xmpErrorUnsupported;
+done:
   if(inplace) {
     cudaMemcpyAsync(d->slimbs,sub_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
   }
@@ -253,7 +290,7 @@ xmpError_t XMPAPI xmpIntegersSqrAsync(xmpHandle_t handle, xmpIntegers_t p, const
 
   if(p->count<count)
     return xmpErrorInvalidCount;
-  
+
   if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
@@ -274,6 +311,14 @@ xmpError_t XMPAPI xmpIntegersSqrAsync(xmpHandle_t handle, xmpIntegers_t p, const
   }
 
   a->requireFormat(handle, xmpFormatStrided);
+  
+  xmpAlgorithm_t alg = policy->algorithm;
+  if(alg==xmpAlgorithmDefault) {
+    if(a->precision<=512) 
+      alg = xmpAlgorithmRegMP;
+    else
+      alg = xmpAlgorithmDigitMP;  
+  }
 
   // package up the arguments
   sqr_arguments.out_data=dst;
@@ -287,30 +332,42 @@ xmpError_t XMPAPI xmpIntegersSqrAsync(xmpHandle_t handle, xmpIntegers_t p, const
   sqr_arguments.a_indices=policy->indices[1];
   sqr_arguments.a_indices_count=policy->indices_count[1];
 
-  if(a->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 2>);
-    regmp_sqr_kernel<GSL, 2><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
+  if(alg==xmpAlgorithmRegMP) {
+    if(a->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 2>);
+      regmp_sqr_kernel<GSL, 2><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 4>);
+      regmp_sqr_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 8>);
+      regmp_sqr_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=384) {
+      configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 12>);
+      regmp_sqr_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=512) {
+      configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 16>);
+      regmp_sqr_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
+      goto done;
+    }
   }
-  else if(a->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 4>);
-    regmp_sqr_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
-  }
-  else if(a->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 8>);
-    regmp_sqr_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
-  }
-  else if(a->precision<=384) {
-    configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 12>);
-    regmp_sqr_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
-  }
-  else if(a->precision<=512) {
-    configureActiveBlocks(handle, blocks, threads, regmp_sqr_kernel<GSL, 16>);
-    regmp_sqr_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
-  }
-  else {
+  else if(alg==xmpAlgorithmDigitMP) {
     configureActiveBlocks(handle, blocks, threads, digitmp_sqr_kernel<GSL, DIGIT>);
     digitmp_sqr_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(sqr_arguments, count);
+    goto done;
   }
+
+  //this is only reached if they requested an unsupported algorithm
+  return xmpErrorUnsupported;
+done:
 
   if(inplace)
     cudaMemcpyAsync(p->slimbs,dst,out_size,cudaMemcpyDeviceToDevice,handle->stream);
@@ -352,7 +409,7 @@ xmpError_t XMPAPI xmpIntegersMulAsync(xmpHandle_t handle, xmpIntegers_t p, const
 
   if(p->count<count)
     return xmpErrorInvalidCount;
-  
+
   if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
@@ -381,6 +438,15 @@ xmpError_t XMPAPI xmpIntegersMulAsync(xmpHandle_t handle, xmpIntegers_t p, const
 
   l->requireFormat(handle, xmpFormatStrided);
   s->requireFormat(handle, xmpFormatStrided);
+  
+  xmpAlgorithm_t alg = policy->algorithm;
+  if(alg==xmpAlgorithmDefault) {
+    if(l->precision<=512 && s->precision<512) 
+      alg = xmpAlgorithmRegMP;
+    else
+      alg = xmpAlgorithmDigitMP;  
+  }
+
 
   // package up the arguments
   mul_arguments.out_data=dst;
@@ -400,63 +466,83 @@ xmpError_t XMPAPI xmpIntegersMulAsync(xmpHandle_t handle, xmpIntegers_t p, const
   mul_arguments.a_indices_count=policy->indices_count[1];
   mul_arguments.b_indices_count=policy->indices_count[2];
 
-  // multiply is a very common operator, so we have many sizes
-  if(l->precision<=64 && s->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 2, 2>);
-    regmp_mul_kernel<GSL, 2, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+  if(alg==xmpAlgorithmRegMP) {
+    // multiply is a very common operator, so we have many sizes
+    if(l->precision<=64 && s->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 2, 2>);
+      regmp_mul_kernel<GSL, 2, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=128 && s->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 4, 2>);
+      regmp_mul_kernel<GSL, 4, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=192 && s->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 6, 2>);
+      regmp_mul_kernel<GSL, 6, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=256 && s->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 8, 2>);
+      regmp_mul_kernel<GSL, 8, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=384 && s->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 12, 2>);
+      regmp_mul_kernel<GSL, 12, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=512 && s->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 16, 2>);
+      regmp_mul_kernel<GSL, 16, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=128 && s->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 4, 4>);
+      regmp_mul_kernel<GSL, 4, 4><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=256 && s->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 8, 4>);
+      regmp_mul_kernel<GSL, 8, 4><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=256 && s->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 8, 8>);
+      regmp_mul_kernel<GSL, 8, 8><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=384 && s->precision<=192) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 12, 6>);
+      regmp_mul_kernel<GSL, 12, 6><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=384 && s->precision<=384) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 12, 12>);
+      regmp_mul_kernel<GSL, 12, 12><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=512 && s->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 16, 8>);
+      regmp_mul_kernel<GSL, 16, 8><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
+    else if(l->precision<=512 && s->precision<=512) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 16, 16>);
+      regmp_mul_kernel<GSL, 16, 16><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+      goto done;
+    }
   }
-  else if(l->precision<=128 && s->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 4, 2>);
-    regmp_mul_kernel<GSL, 4, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=192 && s->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 6, 2>);
-    regmp_mul_kernel<GSL, 6, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=256 && s->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 8, 2>);
-    regmp_mul_kernel<GSL, 8, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=384 && s->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 12, 2>);
-    regmp_mul_kernel<GSL, 12, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=512 && s->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 16, 2>);
-    regmp_mul_kernel<GSL, 16, 2><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=128 && s->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 4, 4>);
-    regmp_mul_kernel<GSL, 4, 4><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=256 && s->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 8, 4>);
-    regmp_mul_kernel<GSL, 8, 4><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=256 && s->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 8, 8>);
-    regmp_mul_kernel<GSL, 8, 8><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=384 && s->precision<=192) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 12, 6>);
-    regmp_mul_kernel<GSL, 12, 6><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=384 && s->precision<=384) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 12, 12>);
-    regmp_mul_kernel<GSL, 12, 12><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=512 && s->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 16, 8>);
-    regmp_mul_kernel<GSL, 16, 8><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else if(l->precision<=512 && s->precision<=512) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mul_kernel<GSL, 16, 16>);
-    regmp_mul_kernel<GSL, 16, 16><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
-  }
-  else {
+  else if(alg==xmpAlgorithmDigitMP) {  
     configureActiveBlocks(handle, blocks, threads, digitmp_mul_kernel<GSL, DIGIT>);
     digitmp_mul_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
+    goto done;
   }
+
+  //this is only reached if they requested an unsupported algorithm
+  return xmpErrorUnsupported;
+done:
 
   if(inplace)
     cudaMemcpyAsync(p->slimbs,dst,out_size,cudaMemcpyDeviceToDevice,handle->stream);
@@ -493,7 +579,7 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
 
   if(q->count<count)
     return xmpErrorInvalidCount;
-  
+
   if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
@@ -502,6 +588,15 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
+  
+  xmpAlgorithm_t alg = policy->algorithm;
+  if(alg==xmpAlgorithmDefault) {
+    if(a->precision<=512 && b->precision<512) 
+      alg = xmpAlgorithmRegMP;
+    else
+      alg = xmpAlgorithmDigitMP;  
+  }
+
 
   // package up the arguments
   div_arguments.out_data=q->slimbs;
@@ -534,43 +629,54 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
     div_arguments.out_data=(xmpLimb_t*)handle->scratch;
   }
 
-  if(a->precision<=64 && b->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 2, 2>);
-    regmp_div_kernel<GSL, 2, 2><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+  if(alg==xmpAlgorithmRegMP) {
+    if(a->precision<=64 && b->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 2, 2>);
+      regmp_div_kernel<GSL, 2, 2><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=128 && b->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 4, 2>);
+      regmp_div_kernel<GSL, 4, 2><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=128 && b->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 4, 4>);
+      regmp_div_kernel<GSL, 4, 4><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=256 && b->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 8, 4>);
+      regmp_div_kernel<GSL, 8, 4><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=256 && b->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 8, 8>);
+      regmp_div_kernel<GSL, 8, 8><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=384 && b->precision<=192) {
+      configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 12, 6>);
+      regmp_div_kernel<GSL, 12, 6><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=384 && b->precision<=384) {
+      configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 12, 12>);
+      regmp_div_kernel<GSL, 12, 12><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=512 && b->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 16, 8>);
+      regmp_div_kernel<GSL, 16, 8><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=512 && b->precision<=512) {
+      configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 16, 16>);
+      regmp_div_kernel<GSL, 16, 16><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+      goto done;
+    }
   }
-  else if(a->precision<=128 && b->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 4, 2>);
-    regmp_div_kernel<GSL, 4, 2><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
-  }
-  else if(a->precision<=128 && b->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 4, 4>);
-    regmp_div_kernel<GSL, 4, 4><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
-  }
-  else if(a->precision<=256 && b->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 8, 4>);
-    regmp_div_kernel<GSL, 8, 4><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
-  }
-  else if(a->precision<=256 && b->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 8, 8>);
-    regmp_div_kernel<GSL, 8, 8><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
-  }
-  else if(a->precision<=384 && b->precision<=192) {
-    configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 12, 6>);
-    regmp_div_kernel<GSL, 12, 6><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
-  }
-  else if(a->precision<=384 && b->precision<=384) {
-    configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 12, 12>);
-    regmp_div_kernel<GSL, 12, 12><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
-  }
-  else if(a->precision<=512 && b->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 16, 8>);
-    regmp_div_kernel<GSL, 16, 8><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
-  }
-  else if(a->precision<=512 && b->precision<=512) {
-    configureActiveBlocks(handle, blocks, threads, regmp_div_kernel<GSL, 16, 16>);
-    regmp_div_kernel<GSL, 16, 16><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
-  }
-  else {
+  else if(alg==xmpAlgorithmDigitMP) {    
     int32_t digits=DIV_ROUND_UP(a->precision, DIGIT*32) + DIV_ROUND_UP(b->precision, DIGIT*32) + 2;
     size_t  bytes=digits*DIGIT*sizeof(xmpLimb_t);
 
@@ -591,8 +697,12 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
 
     configureActiveBlocks(handle, blocks, threads, digitmp_div_kernel<GSL, DIGIT>);
     digitmp_div_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(div_arguments, count);
+    goto done;
   }
 
+  //this is only reached if they requested an unsupported algorithm
+  return xmpErrorUnsupported;
+done:
   q->setFormat(xmpFormatStrided);
 
   if(inplace) {
@@ -629,7 +739,7 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
 
   if(m->count<count)
     return xmpErrorInvalidCount;
-  
+
   if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
@@ -638,6 +748,14 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
+  
+  xmpAlgorithm_t alg = policy->algorithm;
+  if(alg==xmpAlgorithmDefault) {
+    if(a->precision<=512 && b->precision<512) 
+      alg = xmpAlgorithmRegMP;
+    else
+      alg = xmpAlgorithmDigitMP;  
+  }
 
   // package up the arguments
   mod_arguments.out_data=m->slimbs;
@@ -670,55 +788,65 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
     mod_arguments.out_data=(xmpLimb_t*)handle->scratch;
   }
 
-
-  if(a->precision<=64 && b->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 2, 2>);
-    regmp_mod_kernel<GSL, 2, 2><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+  if(alg==xmpAlgorithmRegMP) {
+    if(a->precision<=64 && b->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 2, 2>);
+      regmp_mod_kernel<GSL, 2, 2><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=128 && b->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 4, 2>);
+      regmp_mod_kernel<GSL, 4, 2><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=128 && b->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 4, 4>);
+      regmp_mod_kernel<GSL, 4, 4><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=256 && b->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 8, 4>);
+      regmp_mod_kernel<GSL, 8, 4><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=256 && b->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 8, 8>);
+      regmp_mod_kernel<GSL, 8, 8><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=384 && b->precision<=192) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 12, 6>);
+      regmp_mod_kernel<GSL, 12, 6><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=384 && b->precision<=384) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 12, 12>);
+      regmp_mod_kernel<GSL, 12, 12><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=512 && b->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 16, 8>);
+      regmp_mod_kernel<GSL, 16, 8><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=512 && b->precision<=512) {
+      configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 16, 16>);
+      regmp_mod_kernel<GSL, 16, 16><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+      goto done;
+    }
   }
-  else if(a->precision<=128 && b->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 4, 2>);
-    regmp_mod_kernel<GSL, 4, 2><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
-  }
-  else if(a->precision<=128 && b->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 4, 4>);
-    regmp_mod_kernel<GSL, 4, 4><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
-  }
-  else if(a->precision<=256 && b->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 8, 4>);
-    regmp_mod_kernel<GSL, 8, 4><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
-  }
-  else if(a->precision<=256 && b->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 8, 8>);
-    regmp_mod_kernel<GSL, 8, 8><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
-  }
-  else if(a->precision<=384 && b->precision<=192) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 12, 6>);
-    regmp_mod_kernel<GSL, 12, 6><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
-  }
-  else if(a->precision<=384 && b->precision<=384) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 12, 12>);
-    regmp_mod_kernel<GSL, 12, 12><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
-  }
-  else if(a->precision<=512 && b->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 16, 8>);
-    regmp_mod_kernel<GSL, 16, 8><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
-  }
-  else if(a->precision<=512 && b->precision<=512) {
-    configureActiveBlocks(handle, blocks, threads, regmp_mod_kernel<GSL, 16, 16>);
-    regmp_mod_kernel<GSL, 16, 16><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
-  }
-  else {
+  else if(alg==xmpAlgorithmDigitMP) {
     int32_t digits=DIV_ROUND_UP(a->precision, DIGIT*32) + DIV_ROUND_UP(b->precision, DIGIT*32) + 2;
     size_t  bytes=digits*DIGIT*sizeof(xmpLimb_t);
 
     bytes=bytes*ROUND_UP(count, GEOMETRY);
-    
+
     if(inplace) bytes+=out_size;
 
     error=xmpSetNecessaryScratchSize(handle, bytes);
     if(error!=xmpErrorSuccess)
       return error;
-    
+
     if(inplace)
       mod_arguments.scratch=(xmpLimb_t *)(reinterpret_cast<char*>(handle->scratch)+out_size);
     else  
@@ -726,7 +854,12 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
 
     configureActiveBlocks(handle, blocks, threads, digitmp_mod_kernel<GSL, DIGIT>);
     digitmp_mod_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(mod_arguments, count);
+    goto done;
   }
+
+  //this is only reached if they requested an unsupported algorithm
+  return xmpErrorUnsupported;
+done:
 
   if(inplace) {
     cudaMemcpyAsync(m->slimbs,mod_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
@@ -776,6 +909,14 @@ xmpError_t XMPAPI xmpIntegersDivModAsync(xmpHandle_t handle, xmpIntegers_t q, xm
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
+  
+  xmpAlgorithm_t alg = policy->algorithm;
+  if(alg==xmpAlgorithmDefault) {
+    if(a->precision<=512 && b->precision<512) 
+      alg = xmpAlgorithmRegMP;
+    else
+      alg = xmpAlgorithmDigitMP;  
+  }
 
   // package up the arguments
   divmod_arguments.q_data=q->slimbs;
@@ -823,43 +964,54 @@ xmpError_t XMPAPI xmpIntegersDivModAsync(xmpHandle_t handle, xmpIntegers_t q, xm
     divmod_arguments.r_indices=(xmpLimb_t*)(reinterpret_cast<char*>(handle->scratch)+soffset);
   }
 
-  if(a->precision<=64 && b->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 2, 2>);
-    regmp_divmod_kernel<GSL, 2, 2><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+  if(alg==xmpAlgorithmRegMP) {
+    if(a->precision<=64 && b->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 2, 2>);
+      regmp_divmod_kernel<GSL, 2, 2><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=128 && b->precision<=64) {
+      configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 4, 2>);
+      regmp_divmod_kernel<GSL, 4, 2><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=128 && b->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 4, 4>);
+      regmp_divmod_kernel<GSL, 4, 4><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=256 && b->precision<=128) {
+      configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 8, 4>);
+      regmp_divmod_kernel<GSL, 8, 4><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=256 && b->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 8, 8>);
+      regmp_divmod_kernel<GSL, 8, 8><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=384 && b->precision<=192) {
+      configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 12, 6>);
+      regmp_divmod_kernel<GSL, 12, 6><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=384 && b->precision<=384) {
+      configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 12, 12>);
+      regmp_divmod_kernel<GSL, 12, 12><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=512 && b->precision<=256) {
+      configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 16, 8>);
+      regmp_divmod_kernel<GSL, 16, 8><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+      goto done;
+    }
+    else if(a->precision<=512 && b->precision<=512) {
+      configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 16, 16>);
+      regmp_divmod_kernel<GSL, 16, 16><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+      goto done;
+    }
   }
-  else if(a->precision<=128 && b->precision<=64) {
-    configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 4, 2>);
-    regmp_divmod_kernel<GSL, 4, 2><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
-  }
-  else if(a->precision<=128 && b->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 4, 4>);
-    regmp_divmod_kernel<GSL, 4, 4><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
-  }
-  else if(a->precision<=256 && b->precision<=128) {
-    configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 8, 4>);
-    regmp_divmod_kernel<GSL, 8, 4><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
-  }
-  else if(a->precision<=256 && b->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 8, 8>);
-    regmp_divmod_kernel<GSL, 8, 8><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
-  }
-  else if(a->precision<=384 && b->precision<=192) {
-    configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 12, 6>);
-    regmp_divmod_kernel<GSL, 12, 6><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
-  }
-  else if(a->precision<=384 && b->precision<=384) {
-    configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 12, 12>);
-    regmp_divmod_kernel<GSL, 12, 12><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
-  }
-  else if(a->precision<=512 && b->precision<=256) {
-    configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 16, 8>);
-    regmp_divmod_kernel<GSL, 16, 8><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
-  }
-  else if(a->precision<=512 && b->precision<=512) {
-    configureActiveBlocks(handle, blocks, threads, regmp_divmod_kernel<GSL, 16, 16>);
-    regmp_divmod_kernel<GSL, 16, 16><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
-  }
-  else {
+  else if(alg==xmpAlgorithmDigitMP) {
     int32_t digits=DIV_ROUND_UP(a->precision, DIGIT*32) + DIV_ROUND_UP(b->precision, DIGIT*32) + 2;
     size_t  bytes=digits*DIGIT*sizeof(xmpLimb_t);
 
@@ -873,7 +1025,12 @@ xmpError_t XMPAPI xmpIntegersDivModAsync(xmpHandle_t handle, xmpIntegers_t q, xm
 
     configureActiveBlocks(handle, blocks, threads, digitmp_divmod_kernel<GSL, DIGIT>);
     digitmp_divmod_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(divmod_arguments, count);
+    goto done;
   }
+
+  //this is only reached if they requested an unsupported algorithm
+  return xmpErrorUnsupported;
+done:
 
   if(qinplace) {
     cudaMemcpyAsync(q->slimbs,divmod_arguments.q_indices,qout_size,cudaMemcpyDeviceToDevice,handle->stream);
@@ -945,46 +1102,59 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   // heuristic for picking crossovers
   words=0;
   width=0;
+  
+  xmpAlgorithm_t alg = policy->algorithm;
 
-  if(handle->arch>=30) {
-    // MAXWELL heuristic
-    if((out->precision==1024 || count<handle->smCount*768) && out->precision<=1024) {
-      if(precision<=128) {
-        words=1;
-        width=4;
-      }
-      else if(precision<=256) {
-        words=1;
-        width=8;
-      }
-      else if(precision<=384) {
-        words=3;
-        width=4;
-      }
-      else if(precision<=512) {
-        words=1;
-        width=16;
-      }
-      else if(precision<=768) {
-        words=3;
-        width=8;
-      }
-      else if(precision<=1024) {
-        if(count<handle->smCount*32) {
+  if(alg==xmpAlgorithmDefault) {
+    if(precision<=512) 
+      alg = xmpAlgorithmRegMP;
+    else if(precision<=1024)
+      alg = xmpAlgorithmDistributedMP;  //TODO support higher bit counts with distributed
+    else
+      alg = xmpAlgorithmDigitMP;  
+  }
+
+  if(alg==xmpAlgorithmDistributedMP) {
+    if(handle->arch>=30) {
+      // MAXWELL heuristic
+      if((out->precision==1024 || count<handle->smCount*768) && out->precision<=1024) {
+        if(precision<=128) {
           words=1;
-          width=32;
+          width=4;
         }
-        else if(count<handle->smCount*64) {
-          words=2;
-          width=16;
-        }
-        else if(count<handle->smCount*576) {
-          words=4;
+        else if(precision<=256) {
+          words=1;
           width=8;
         }
-        else {
-          words=8;
+        else if(precision<=384) {
+          words=3;
           width=4;
+        }
+        else if(precision<=512) {
+          words=1;
+          width=16;
+        }
+        else if(precision<=768) {
+          words=3;
+          width=8;
+        }
+        else if(precision<=1024) {
+          if(count<handle->smCount*32) {
+            words=1;
+            width=32;
+          }
+          else if(count<handle->smCount*64) {
+            words=2;
+            width=16;
+          }
+          else if(count<handle->smCount*576) {
+            words=4;
+            width=8;
+          }
+          else {
+            words=8;
+            width=4;
+          }
         }
       }
     }
@@ -1030,77 +1200,98 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   ar_arguments.mod_indices_count=policy->indices_count[3];
   ar_arguments.width=width;
 
-  if(precision<=128 && words==0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+  if(alg==xmpAlgorithmRegMP) {
+    if(precision<=128 && words==0) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 4>);
-    regmp_ar_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
-  }
-  else if(precision<=256 && words==0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+      configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 4>);
+      regmp_ar_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else if(precision<=256 && words==0) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 8>);
-    regmp_ar_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
-  }
-  else if(precision<=384 && words==0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+      configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 8>);
+      regmp_ar_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else if(precision<=384 && words==0) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 12>);
-    regmp_ar_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
-  }
-  else if(precision<=512 && words==0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+      configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 12>);
+      regmp_ar_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else if(precision<=512 && words==0) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 16>);
-    regmp_ar_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      configureActiveBlocks(handle, blocks, threads, regmp_ar_kernel<GSL, 16>);
+      regmp_ar_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else
+      return xmpErrorUnsupported;
   }
-  else if(precision<=128 && words!=0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+  else if(alg==xmpAlgorithmDistributedMP) {
+    if(precision<=128) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 4>);
-    warpmp_small_ar_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
-  }
-  else if(precision<=256 && words!=0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+      configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 4>);
+      warpmp_small_ar_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else if(precision<=256) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 8>);
-    warpmp_small_ar_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
-  }
-  else if(precision<=384 && words!=0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+      configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 8>);
+      warpmp_small_ar_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else if(precision<=384) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 12>);
-    warpmp_small_ar_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
-  }
-  else if(precision<=512 && words!=0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+      configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 12>);
+      warpmp_small_ar_kernel<GSL, 12><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else if(precision<=512) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 16>);
-    warpmp_small_ar_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
-  }
-  else if(precision<=768 && words!=0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+      configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 16>);
+      warpmp_small_ar_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else if(precision<=768) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 24>);
-    warpmp_small_ar_kernel<GSL, 24><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
-  }
-  else if(precision<=1024 && words!=0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+      configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 24>);
+      warpmp_small_ar_kernel<GSL, 24><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else if(precision<=1024) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 32>);
-    warpmp_small_ar_kernel<GSL, 32><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      configureActiveBlocks(handle, blocks, threads, warpmp_small_ar_kernel<GSL, 32>);
+      warpmp_small_ar_kernel<GSL, 32><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
+    }
+    else {
+      // FIX FIX FIX
+      // need a warpmp_large_ar_kernel that uses digitized AR
+      return xmpErrorUnsupported;
+    }
   }
-  else if(words!=0) {
-    // FIX FIX FIX
-    // need a warpmp_large_ar_kernel that uses digitized AR
-    return xmpErrorUnsupported;
-  }
-  else {
+  else if(alg==xmpAlgorithmDigitMP) {
     dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
     configureActiveBlocks(handle, blocks, threads, digitmp_ar_kernel<GSL, DIGIT>);
     digitmp_ar_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+    goto donear;
   }
+
+  //this is only reached if they requested an unsupported algorithm
+  return xmpErrorUnsupported;
+donear:
 
 
   // package up the arguments
@@ -1137,83 +1328,110 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
     powm_arguments.out_data=(xmpLimb_t*)(reinterpret_cast<char*>(handle->scratch)+windowBytes);
   }
 
-  if(words==1) {
-    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+  if(alg==xmpAlgorithmDistributedMP) {
+    if(words==1) {
+      dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 1>);
-    warpmp_powm_kernel<GSL, 1><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 1>);
+      warpmp_powm_kernel<GSL, 1><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      goto donepowm;
+    }
+    else if(words==2) {
+      dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+      configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 2>);
+      warpmp_powm_kernel<GSL, 2><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      goto donepowm;
+    }
+    else if(words==3) {
+      dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+      configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 3>);
+      warpmp_powm_kernel<GSL, 3><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      goto donepowm;
+    }
+    else if(words==4) {
+      dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+      configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 4>);
+      warpmp_powm_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      goto donepowm;
+    }
+    else if(words==6) {
+      dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+      configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 6>);
+      warpmp_powm_kernel<GSL, 6><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      goto donepowm;
+    }
+    else if(words==8) {
+      dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+
+      configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 8>);
+      warpmp_powm_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      goto donepowm;
+    }
+    else {
+      return xmpErrorUnsupported;
+    }
   }
-  else if(words==2) {
-    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+  else if(alg==xmpAlgorithmRegMP) {
+    if(precision<=128 && words==0) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 2>);
-    warpmp_powm_kernel<GSL, 2><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 4, 0, 0>);
+      regmp_powm_kernel<GSL, 4, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
+      goto donepowm;
+    }
+    else if(precision<=256 && words==0) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+      configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 8, 0, 0>);
+      regmp_powm_kernel<GSL, 8, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
+      goto donepowm;
+    }
+    else if(precision<=384 && words==0) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+      configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 12, 0, 0>);
+      regmp_powm_kernel<GSL, 12, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
+      goto donepowm;
+    }
+    else if(precision<=512 && words==0) {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+      configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 16, 0, 0>);
+      regmp_powm_kernel<GSL, 16, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
+      goto donepowm;
+    }
+    else {
+      return xmpErrorUnsupported;
+    }
   }
-  else if(words==3) {
-    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
+  else if(alg==xmpAlgorithmDigitMP) {
+    if(ROUND_UP(mod->precision, DIGIT*32)/8*mod->count<2048) {
+      dim3    blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+      int32_t shared_mem;
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 3>);
-    warpmp_powm_kernel<GSL, 3><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      shared_mem=ROUND_UP(mod->precision, DIGIT*32)/8*mod->count;
+      powm_arguments.mod_count=mod->count;  // turn on the shared memory caching
+
+      configureActiveBlocks(handle, blocks, threads, digitmp_powm_kernel<true, GSL, DIGIT>);
+      digitmp_powm_kernel<true, GSL, DIGIT><<<blocks, threads, shared_mem, handle->stream>>>(powm_arguments, count);
+      goto donepowm;
+    }
+    else {
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+      configureActiveBlocks(handle, blocks, threads, digitmp_powm_kernel<false, GSL, DIGIT>);
+      digitmp_powm_kernel<false, GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
+      goto donepowm;
+    }
   }
-  else if(words==4) {
-    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
 
-    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 4>);
-    warpmp_powm_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
-  }
-  else if(words==6) {
-    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
-
-    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 6>);
-    warpmp_powm_kernel<GSL, 6><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
-  }
-  else if(words==8) {
-    dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
-
-    configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 8>);
-    warpmp_powm_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
-  }
-  else
-  if(precision<=128 && words==0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
-
-    configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 4, 0, 0>);
-    regmp_powm_kernel<GSL, 4, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
-  }
-  else if(precision<=256 && words==0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
-
-    configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 8, 0, 0>);
-    regmp_powm_kernel<GSL, 8, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
-  }
-  else if(precision<=384 && words==0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
-
-    configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 12, 0, 0>);
-    regmp_powm_kernel<GSL, 12, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
-  }
-  else if(precision<=512 && words==0) {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
-
-    configureActiveBlocks(handle, blocks, threads, regmp_powm_kernel<GSL, 16, 0, 0>);
-    regmp_powm_kernel<GSL, 16, 0, 0><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
-  }
-  else if(ROUND_UP(mod->precision, DIGIT*32)/8*mod->count<2048) {
-    dim3    blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
-    int32_t shared_mem;
-
-    shared_mem=ROUND_UP(mod->precision, DIGIT*32)/8*mod->count;
-    powm_arguments.mod_count=mod->count;  // turn on the shared memory caching
-
-    configureActiveBlocks(handle, blocks, threads, digitmp_powm_kernel<true, GSL, DIGIT>);
-    digitmp_powm_kernel<true, GSL, DIGIT><<<blocks, threads, shared_mem, handle->stream>>>(powm_arguments, count);
-  }
-  else {
-    dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
-
-    configureActiveBlocks(handle, blocks, threads, digitmp_powm_kernel<false, GSL, DIGIT>);
-    digitmp_powm_kernel<false, GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
-  }
+  //this is only reached if they requested an unsupported algorithm
+  return xmpErrorUnsupported;
+donepowm:
 
   if(words==0) {
     out->setFormat(xmpFormatStrided);

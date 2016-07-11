@@ -1008,7 +1008,8 @@ struct TwoInTwoOutParams {
 struct PowmParams {
   uint32_t N1, N2, N3, N4, N;
   uint32_t P1, P2, P3, P4;
-  PowmParams(uint32_t P1, uint32_t P2, uint32_t P3, uint32_t P4, uint32_t N1, uint32_t N2, uint32_t N3, uint32_t N4, uint32_t N) : P1(P1), P2(P2), P3(P3), P4(P4), N1(N1), N2(N2), N3(N3), N4(N4), N(N) {}
+  xmpAlgorithm_t algorithm;
+  PowmParams(uint32_t P1, uint32_t P2, uint32_t P3, uint32_t P4, uint32_t N1, uint32_t N2, uint32_t N3, uint32_t N4, uint32_t N, xmpAlgorithm_t algorithm) : P1(P1), P2(P2), P3(P3), P4(P4), N1(N1), N2(N2), N3(N3), N4(N4), N(N), algorithm(algorithm) {}
   std::string DebugString() {
     std::stringstream s;
     s << "N1: " << N1 << " ";
@@ -1020,6 +1021,7 @@ struct PowmParams {
     s << "P2: " << P2 << " ";
     s << "P3: " << P3 << " ";
     s << "P4: " << P4 << " ";
+    s << "Algorithm: " << getAlgorithmString(algorithm) << " ";
     return s.str();
   }
 };
@@ -1108,7 +1110,9 @@ TEST_P(PowmTest,opTests) {
   xmpIntegers_t x_c, x_b, x_e, x_m;
   ASSERT_EQ(xmpErrorSuccess,xmpHandleCreate(&handle));
   ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicyCreate(handle,&policy));
+  xmpAlgorithm_t algorithm=p.algorithm;
 
+  ASSERT_EQ(xmpErrorSuccess,xmpExecutionPolicySetParameter(handle,policy,xmpAlgorithm,algorithm));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_c,cP,cN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_b,bP,bN));
   ASSERT_EQ(xmpErrorSuccess,xmpIntegersCreate(handle,&x_m,mP,mN));
@@ -2806,44 +2810,103 @@ INSTANTIATE_TEST_CASE_P(DivModTests, genericTwoInTwoOutTest, ::testing::Values(
         TwoInTwoOutParams(xmpIntegersDivModAsync,mpz_divmod,352,352,352,352,N,N,N,N,N),
         TwoInTwoOutParams(xmpIntegersDivModAsync,mpz_divmod,384,384,384,384,N,N,N,N,N)
       ));
+ 
+INSTANTIATE_TEST_CASE_P(DistributedPowmTests, PowmTest, ::testing::Values( 
+      PowmParams(128,128,128,128,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(128,128,128,128,N,N,2*N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(128,128,128,128,N,N,1,1,N,xmpAlgorithmDistributedMP),
+      PowmParams(128,128,128,128,N,N,M,M,N,xmpAlgorithmDistributedMP),
+      PowmParams(128,128,128,128,N,N,M,1,N,xmpAlgorithmDistributedMP),
+      PowmParams(128,128,128,128,N,1,M,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(128,128,128,128,N,N,N,N,M,xmpAlgorithmDistributedMP),
+      PowmParams(128,128,128,128,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      
+      PowmParams(32,32,32,32,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(32,32,32,32,N,N,1,1,N,xmpAlgorithmDistributedMP),
+      PowmParams(64,64,64,64,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(64,64,64,64,N,N,1,1,N,xmpAlgorithmDistributedMP),
+      PowmParams(128,128,128,128,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(128,128,128,128,N,N,1,1,N,xmpAlgorithmDistributedMP),
+      PowmParams(256,256,256,256,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(256,256,256,256,N,N,1,1,N,xmpAlgorithmDistributedMP),
+      PowmParams(512,512,512,512,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(512,512,512,512,N,N,1,1,N,xmpAlgorithmDistributedMP),
 
- INSTANTIATE_TEST_CASE_P(PowmTests, PowmTest, ::testing::Values( 
-      PowmParams(128,128,128,128,N,N,N,N,N),
-      PowmParams(128,128,128,128,N,N,2*N,N,N),
-      PowmParams(128,128,128,128,N,N,1,1,N),
-      PowmParams(128,128,128,128,N,N,M,M,N),
-      PowmParams(128,128,128,128,N,N,M,1,N),
-      PowmParams(128,128,128,128,N,1,M,N,N),
-      PowmParams(128,128,128,128,N,N,N,N,M),
+      PowmParams(1024,1024,1024,1024,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(1024,1024,1024,1024,N,N,1,1,N,xmpAlgorithmDistributedMP),
+#if 0
+      PowmParams(2048,2048,2048,2048,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(2048,2048,2048,2048,N,N,1,1,N,xmpAlgorithmDistributedMP),
+      PowmParams(4096,4096,4096,4096,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(4096,4096,4096,4096,N,N,1,1,N,xmpAlgorithmDistributedMP),
+      PowmParams(8192,8192,8192,8192,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(8192,8192,8192,8192,N,N,1,1,N,xmpAlgorithmDistributedMP),
+#endif
+
+      PowmParams(160,160,160,160,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(192,192,192,192,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(224,224,224,224,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(288,288,288,288,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(320,320,320,320,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(352,352,352,352,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(384,384,384,384,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(544,544,544,544,N,N,N,N,N,xmpAlgorithmDistributedMP)
       
-      PowmParams(32,32,32,32,N,N,N,N,N),
-      PowmParams(32,32,32,32,N,N,1,1,N),
-      PowmParams(64,64,64,64,N,N,N,N,N),
-      PowmParams(64,64,64,64,N,N,1,1,N),
-      PowmParams(128,128,128,128,N,N,N,N,N),
-      PowmParams(128,128,128,128,N,N,1,1,N),
-      PowmParams(256,256,256,256,N,N,N,N,N),
-      PowmParams(256,256,256,256,N,N,1,1,N),
-      PowmParams(512,512,512,512,N,N,N,N,N),
-      PowmParams(512,512,512,512,N,N,1,1,N),
-      PowmParams(1024,1024,1024,1024,N,N,N,N,N),
-      PowmParams(1024,1024,1024,1024,N,N,1,1,N),
-      PowmParams(2048,2048,2048,2048,N,N,N,N,N),
-      PowmParams(2048,2048,2048,2048,N,N,1,1,N),
-      PowmParams(4096,4096,4096,4096,N,N,N,N,N),
-      PowmParams(4096,4096,4096,4096,N,N,1,1,N),
-      PowmParams(8192,8192,8192,8192,N,N,N,N,N),
-      PowmParams(8192,8192,8192,8192,N,N,1,1,N),
+#if 0
+      PowmParams(1056,1056,1056,1056,N,N,N,N,N,xmpAlgorithmDistributedMP),
+      PowmParams(2080,2080,2080,2080,N,N,N,N,N,xmpAlgorithmDistributedMP)
+#endif
+      ));
+ INSTANTIATE_TEST_CASE_P(RegMPPowmTests, PowmTest, ::testing::Values( 
+      PowmParams(128,128,128,128,N,N,2*N,N,N,xmpAlgorithmRegMP),
+      PowmParams(128,128,128,128,N,N,1,1,N,xmpAlgorithmRegMP),
+      PowmParams(128,128,128,128,N,N,M,M,N,xmpAlgorithmRegMP),
+      PowmParams(128,128,128,128,N,N,M,1,N,xmpAlgorithmRegMP),
+      PowmParams(128,128,128,128,N,1,M,N,N,xmpAlgorithmRegMP),
+      PowmParams(128,128,128,128,N,N,N,N,M,xmpAlgorithmRegMP),
       
-      PowmParams(160,160,160,160,N,N,N,N,N),
-      PowmParams(192,192,192,192,N,N,N,N,N),
-      PowmParams(224,224,224,224,N,N,N,N,N),
-      PowmParams(288,288,288,288,N,N,N,N,N),
-      PowmParams(320,320,320,320,N,N,N,N,N),
-      PowmParams(352,352,352,352,N,N,N,N,N),
-      PowmParams(384,384,384,384,N,N,N,N,N),
-      PowmParams(544,544,544,544,N,N,N,N,N),
-      PowmParams(1056,1056,1056,1056,N,N,N,N,N),
-      PowmParams(2080,2080,2080,2080,N,N,N,N,N)
+      PowmParams(32,32,32,32,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(32,32,32,32,N,N,1,1,N,xmpAlgorithmRegMP),
+      PowmParams(64,64,64,64,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(64,64,64,64,N,N,1,1,N,xmpAlgorithmRegMP),
+      PowmParams(128,128,128,128,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(128,128,128,128,N,N,1,1,N,xmpAlgorithmRegMP),
+      PowmParams(256,256,256,256,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(256,256,256,256,N,N,1,1,N,xmpAlgorithmRegMP),
+      PowmParams(512,512,512,512,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(512,512,512,512,N,N,1,1,N,xmpAlgorithmRegMP),
+
+      PowmParams(160,160,160,160,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(192,192,192,192,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(224,224,224,224,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(288,288,288,288,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(320,320,320,320,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(352,352,352,352,N,N,N,N,N,xmpAlgorithmRegMP),
+      PowmParams(384,384,384,384,N,N,N,N,N,xmpAlgorithmRegMP)
+      
+      ));
+
+ INSTANTIATE_TEST_CASE_P(DigitMPPowmTests, PowmTest, ::testing::Values( 
+      PowmParams(1024,1024,1024,1024,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(1024,1024,1024,1024,N,N,1,1,N,xmpAlgorithmDigitMP),
+      PowmParams(2048,2048,2048,2048,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(2048,2048,2048,2048,N,N,1,1,N,xmpAlgorithmDigitMP),
+      PowmParams(4096,4096,4096,4096,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(4096,4096,4096,4096,N,N,1,1,N,xmpAlgorithmDigitMP),
+      PowmParams(8192,8192,8192,8192,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(8192,8192,8192,8192,N,N,1,1,N,xmpAlgorithmDigitMP),
+ 
+#if 0
+      PowmParams(160,160,160,160,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(192,192,192,192,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(224,224,224,224,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(288,288,288,288,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(320,320,320,320,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(352,352,352,352,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(384,384,384,384,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(544,544,544,544,N,N,N,N,N,xmpAlgorithmDigitMP),
+#endif 
+      PowmParams(1056,1056,1056,1056,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(2080,2080,2080,2080,N,N,N,N,N,xmpAlgorithmDigitMP)
 
       ));

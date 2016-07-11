@@ -183,6 +183,8 @@ xmpError_t XMPAPI xmpExecutionPolicyCreate(xmpHandle_t handle, xmpExecutionPolic
   for(int i=0;i<XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS;i++)
     (*policy)->indices[i]=NULL;
 
+  (*policy)->algorithm=xmpAlgorithmDefault;
+
   return xmpErrorSuccess;
 }
 //destroys an execution policy
@@ -254,6 +256,24 @@ xmpError_t XMPAPI xmpExecutionPolicySetIndices(xmpHandle_t handle, xmpExecutionP
 }
 
 xmpError_t XMPAPI xmpExecutionPolicySetParameter(xmpHandle_t handle, xmpExecutionPolicy_t policy, xmpExecutionPolicyParam_t param, xmpExecutionPolicyValue_t val) {
+  switch(param) {
+    case xmpAlgorithm:
+      policy->algorithm=val.algorithm;
+      break;
+    default:
+      return xmpErrorInvalidParameter;
+  }
+  return xmpErrorSuccess;
+}
+
+xmpError_t XMPAPI xmpExecutionPolicyGetParameter(xmpHandle_t handle, xmpExecutionPolicy_t policy, xmpExecutionPolicyParam_t param, xmpExecutionPolicyValue_t &val) {
+  switch(param) {
+    case xmpAlgorithm:
+      val.algorithm=policy->algorithm;
+      break;
+    default:
+      return xmpErrorInvalidParameter;
+  }
   return xmpErrorSuccess;
 }
 

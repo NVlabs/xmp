@@ -60,9 +60,11 @@ const uint32_t XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS = 4;
 struct _xmpExecutionPolicy_t {
   uint32_t *indices[XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS];
   uint32_t indices_count[XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS];
+  xmpAlgorithm_t algorithm;
   _xmpExecutionPolicy_t() {
     for(int i=0;i<XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS; i++)
       indices[i]=NULL;
+    algorithm=xmpAlgorithmDefault;
   }
 };
 
@@ -118,6 +120,31 @@ typedef struct _xmpDispatchEntry_t {
   void           *kernel;
 } xmpDispatchEntry;
 
+inline const char* getAlgorithmString(xmpAlgorithm_t algorithm) {
+    switch(algorithm) {
+      case xmpAlgorithmDefault:
+        return "Default";
+      case xmpAlgorithmDigitMP:
+        return "DigitMP";
+      case xmpAlgorithmRegMP:
+        return "RegMP";
+      case xmpAlgorithmDistributedMP:
+        return "DistributedMP";
+      default:
+        return "Unknown";
+    }
+}
+inline void printPolicy(xmpExecutionPolicy_t policy) {
+  printf("Execution Policy:\n");
+  for(int i=0;i<XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS;i++) {
+    if(policy->indices[i]!=NULL) {
+      printf("    Indices[%d]: %p:%d\n", i, policy->indices[i],policy->indices_count[i]);
+    } else {
+      printf("    Indices[%d]: NULL\n", i );
+    }
+    printf("    Algorithm: %s", getAlgorithmString(policy->algorithm));
+  }
+}
 __global__ void printWordsStrided_kernel(xmpLimb_t* data, int limbs, int stride, int count);
 void printWordsStrided(xmpLimb_t* data, int limbs, int stride, int count);
 __global__ void printWordsCompact_kernel(xmpLimb_t* data, int limbs, int count);

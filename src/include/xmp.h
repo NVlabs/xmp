@@ -54,11 +54,20 @@ typedef enum {
 
 
 typedef enum {
+  xmpAlgorithm
 } xmpExecutionPolicyParam_t;
 
+typedef enum {
+  xmpAlgorithmDefault,        
+  xmpAlgorithmRegMP,         
+  xmpAlgorithmDigitMP,     
+  xmpAlgorithmDistributedMP,
+} xmpAlgorithm_t;
+
 union xmpExecutionPolicyValue_t {
-  uint32_t u32;
-  void* p;
+  xmpAlgorithm_t algorithm;
+  xmpExecutionPolicyValue_t(xmpAlgorithm_t a) { algorithm=a; }
+
 };
 
 inline const char* xmpGetErrorString (xmpError_t error) {
@@ -135,6 +144,7 @@ xmpError_t XMPAPI xmpExecutionPolicyDestroy(xmpHandle_t handle, xmpExecutionPoli
 xmpError_t XMPAPI xmpExecutionPolicySetIndices(xmpHandle_t handle, xmpExecutionPolicy_t policy, uint32_t which_integer, uint32_t *indices, uint32_t count);
 xmpError_t XMPAPI xmpExecutionPolicySetIndicesAsync(xmpHandle_t handle, xmpExecutionPolicy_t policy, uint32_t which_integer, uint32_t *indices, uint32_t count);
 xmpError_t XMPAPI xmpExecutionPolicySetParameter(xmpHandle_t handle, xmpExecutionPolicy_t policy, xmpExecutionPolicyParam_t param, xmpExecutionPolicyValue_t val);
+xmpError_t XMPAPI xmpExecutionPolicyGetParameter(xmpHandle_t handle, xmpExecutionPolicy_t policy, xmpExecutionPolicyParam_t param, xmpExecutionPolicyValue_t &val);
 
 
 //allocate array of integers
