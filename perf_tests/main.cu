@@ -64,7 +64,7 @@ uint32_t rand32() {
   return (hi<<16)|lo; 
 }
 
-double run_gpu_performance_test(const vector<int> &devices, uint32_t iterations, uint32_t bits, uint32_t N, uint32_t bN, uint32_t eN, uint32_t mN) {
+double run_gpu_performance_test(const vector<int> &devices, uint32_t iterations, uint32_t bits, uint32_t N, uint32_t bN, uint32_t eN, uint32_t mN, xmpAlgorithm_t alg) {
   double ops;
   int numDev=devices.size();
   if(eN==0) eN=N;
@@ -97,8 +97,12 @@ double run_gpu_performance_test(const vector<int> &devices, uint32_t iterations,
     for(int i=0;i<mN;i++) {
       m[i*limbs]|=1;
     }
-    XMP_CHECK_ERROR(xmpHandleCreate(&handle));
+    xmpExecutionPolicy_t policy;
 
+    XMP_CHECK_ERROR(xmpHandleCreate(&handle));
+    XMP_CHECK_ERROR(xmpExecutionPolicyCreate(handle,&policy));
+    XMP_CHECK_ERROR(xmpExecutionPolicySetParameter(handle,policy,xmpAlgorithm,alg));
+    XMP_CHECK_ERROR(xmpHandleSetExecutionPolicy(handle,policy));
     XMP_CHECK_ERROR(xmpIntegersCreate(handle,&x_c,bits,N));
     XMP_CHECK_ERROR(xmpIntegersCreate(handle,&x_b,bits,bN));
     XMP_CHECK_ERROR(xmpIntegersCreate(handle,&x_e,bits,eN));
@@ -109,27 +113,32 @@ double run_gpu_performance_test(const vector<int> &devices, uint32_t iterations,
     XMP_CHECK_ERROR(xmpIntegersImport(handle,x_m,limbs,-1,sizeof(uint32_t),0,0,m,mN));
 
     //warmp up
-    XMP_CHECK_ERROR(xmpIntegersPowm(handle,x_c,x_b,x_e,x_m,N));
-
+    xmpError_t error=xmpIntegersPowm(handle,x_c,x_b,x_e,x_m,N);
     cudaDeviceSynchronize();
-    #pragma omp barrier
-    start=GetCurrentTimeInSeconds();
+    if(error==xmpErrorSuccess) {
+      #pragma omp barrier
+      start=GetCurrentTimeInSeconds();
 
-    for(int i=0;i<iterations;i++) {
-      XMP_CHECK_ERROR(xmpIntegersPowm(handle,x_c,x_b,x_e,x_m,N));
+      for(int i=0;i<iterations;i++) {
+        XMP_CHECK_ERROR(xmpIntegersPowm(handle,x_c,x_b,x_e,x_m,N));
+      }
+      cudaDeviceSynchronize();
+      #pragma omp barrier
+      stop=GetCurrentTimeInSeconds();
+      time_s=stop-start;
+
+      if(d==0) ops=(double)devices.size()*N*iterations/time_s;
+    } else if (error==xmpErrorUnsupported) {
+      if(d==0) ops = 0;
+    } else {
+      exit(EXIT_FAILURE);
     }
-    cudaDeviceSynchronize();
-    #pragma omp barrier
-    stop=GetCurrentTimeInSeconds();
-    time_s=stop-start;
-
-    if(d==0) ops=(double)devices.size()*N*iterations/time_s;
-
 
     XMP_CHECK_ERROR(xmpIntegersDestroy(handle,x_c));
     XMP_CHECK_ERROR(xmpIntegersDestroy(handle,x_b));
     XMP_CHECK_ERROR(xmpIntegersDestroy(handle,x_e));
     XMP_CHECK_ERROR(xmpIntegersDestroy(handle,x_m));
+    XMP_CHECK_ERROR(xmpExecutionPolicyDestroy(handle,policy));
 
     XMP_CHECK_ERROR(xmpHandleDestroy(handle));
 
@@ -264,10 +273,13 @@ int main(int argc, char **argv) {
 
   //parse sizes
   int cpu=0;
-  int c, val;
+  int c, val, a;
   char* str, *str2, *save;
+  xmpAlgorithm_t alg = xmpAlgorithmDefault;
 
-  while((c=getopt(argc,argv,"i:b:s:d:l:c:hm:e:"))!=-1) {
+  xmpAlgorithm_t algorithms[4] = {xmpAlgorithmDefault, xmpAlgorithmRegMP, xmpAlgorithmDigitMP, xmpAlgorithmDistributedMP};
+
+  while((c=getopt(argc,argv,"i:b:s:d:l:c:hm:e:a:"))!=-1) {
     switch(c) {
       case 'i':
         iters=atoi(optarg);
@@ -360,6 +372,11 @@ int main(int argc, char **argv) {
       case 'c':
         cpu=atoi(optarg);
         break;
+      case 'a':
+        a=atoi(optarg);
+        if(a<0 || a>3) printUsageAndExit(1);
+        alg=algorithms[a];
+        break;
       default:
         printf("Error invalid command line switch '%c'\n",c);
         printUsageAndExit(1);
@@ -409,7 +426,7 @@ int main(int argc, char **argv) {
       for(int b=0;b<bits.size();b++) {
 
         //call all, generate tables
-        printf(",%.3e",run_gpu_performance_test(devs, iters, bits[b],  sizes[s], sizes[s], eCount, mCount));
+        printf(",%.3e",run_gpu_performance_test(devs, iters, bits[b],  sizes[s], sizes[s], eCount, mCount, alg));
       }
     }
     printf("\n");

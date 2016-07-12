@@ -5,7 +5,7 @@ This framework is currently not supported on Windows.
 
 Usage:
 
-./perf [-h] [-c threads] [-i iters] [-d device_list] [-s size_list] [-b bit_list] [-l start,end,increment,op], [-m count] [-e count]
+./perf [-h] [-c threads] [-i iters] [-d device_list] [-s size_list] [-b bit_list] [-l start,end,increment,op], [-m count] [-e count] [-a algorithm]
     order of command line parameters does not matter
     -h:  prints this screen
     -c:  eables a CPU run and specifies how many threads to use
@@ -22,4 +22,5 @@ Usage:
             and          -l 1000,2000,1.1,* specifies sizes 1000 to 2000 with multiplication factors 1.1 (i.e 1000,1100,1210,...,1948)
     -m   overwrite the size parameter for the modulus with count
     -e   overwrite the size parameter for the exponent with count
+    -a   use the specified algorithm (algorithm may not be supported for all sizes), 0: default, 1: RegMP, 2: DigitMP, 3: DistributedMP
 

@@ -1117,44 +1117,42 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   if(alg==xmpAlgorithmDistributedMP) {
     if(handle->arch>=30) {
       // MAXWELL heuristic
-      if((out->precision==1024 || count<handle->smCount*768) && out->precision<=1024) {
-        if(precision<=128) {
+      if(precision<=128) {
+        words=1;
+        width=4;
+      }
+      else if(precision<=256) {
+        words=1;
+        width=8;
+      }
+      else if(precision<=384) {
+        words=3;
+        width=4;
+      }
+      else if(precision<=512) {
+        words=1;
+        width=16;
+      }
+      else if(precision<=768) {
+        words=3;
+        width=8;
+      }
+      else if(precision<=1024) {
+        if(count<handle->smCount*32) {
           words=1;
-          width=4;
+          width=32;
         }
-        else if(precision<=256) {
-          words=1;
-          width=8;
-        }
-        else if(precision<=384) {
-          words=3;
-          width=4;
-        }
-        else if(precision<=512) {
-          words=1;
+        else if(count<handle->smCount*64) {
+          words=2;
           width=16;
         }
-        else if(precision<=768) {
-          words=3;
+        else if(count<handle->smCount*576) {
+          words=4;
           width=8;
         }
-        else if(precision<=1024) {
-          if(count<handle->smCount*32) {
-            words=1;
-            width=32;
-          }
-          else if(count<handle->smCount*64) {
-            words=2;
-            width=16;
-          }
-          else if(count<handle->smCount*576) {
-            words=4;
-            width=8;
-          }
-          else {
-            words=8;
-            width=4;
-          }
+        else {
+          words=8;
+          width=4;
         }
       }
     }
@@ -1229,8 +1227,9 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
       regmp_ar_kernel<GSL, 16><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
       goto donear;
     }
-    else
+    else {
       return xmpErrorUnsupported;
+    }
   }
   else if(alg==xmpAlgorithmDistributedMP) {
     if(precision<=128) {
