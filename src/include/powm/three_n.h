@@ -27,7 +27,7 @@ namespace xmp {
   class ThreeN_n {
     public:
       uint32_t _np0;
-      uint32_t _registers[_words*3];
+      uint32_t _registers[_words*4];
 
       __device__ __forceinline__ ThreeN_n(int32_t words, int32_t width, int32_t bits, int32_t window_bits) {
       }
@@ -117,19 +117,21 @@ namespace xmp {
       }
 
       __device__ __forceinline__ void reduceCurrent(uint32_t *window_data, int32_t mod_count) {
-        RegMP A(_registers, 0, 0, _words), RR(_registers, 0, _words, _words*2), N(_registers, 0, 0, _words);
+        RegMP    A(_registers, 0, 0, _words), RR(_registers, 0, _words, _words*2), N(_registers, 0, 0, _words), T(_registers, 0, _words*3, _words);
 
         #pragma unroll
         for(int word=0;word<_words;word++)
           N[word]=window_data[32*word];
 
+#ifdef XMAD
+        reduce(A, RR, N, T, _np0);
+#else
         reduce(A, RR, N, _np0);
+#endif
       }
 
       __device__ __forceinline__ void squareCurrent(uint32_t *window) {
-        RegMP    A(_registers, 0, 0, _words), RR(_registers, 0, _words, _words*2);
-        uint32_t temp[_words/2];
-        RegMP    T(temp, 1, 0, _words/2);
+        RegMP    A(_registers, 0, 0, _words), RR(_registers, 0, _words, _words*2), T(_registers, 0, _words*3, _words/2);
 
 #ifdef XMAD
         sqr(RR, A);
@@ -139,9 +141,7 @@ namespace xmp {
       }
 
       __device__ __forceinline__ void multiplyCurrentByWindow(uint32_t *window_data, int index) {
-        RegMP    A(_registers, 0, 0, _words), C(_registers, 0, _words*2, _words), RR(_registers, 0, _words, _words*2);
-        uint32_t temp[_words];
-        RegMP    T(temp, 1, 0, _words);
+        RegMP    A(_registers, 0, 0, _words), C(_registers, 0, _words*2, _words), RR(_registers, 0, _words, _words*2), T(_registers, 0, _words*3, _words);
 
 #ifdef XMAD
         #pragma unroll
@@ -158,9 +158,7 @@ namespace xmp {
 
       __device__ __forceinline__ void multiplyCurrentByConstant(uint32_t *window_data, int index) {
 /*
-        RegMP    A(_registers, 0, 0, _words), C(_registers, 0, _words*2, _words), RR(_registers, 0, _words, _words*2);
-        uint32_t temp[_words];
-        RegMP    T(temp, 1, 0, _words);
+        RegMP    A(_registers, 0, 0, _words), C(_registers, 0, _words*2, _words), RR(_registers, 0, _words, _words*2), T(_registers, 0, _words*3, _words);
 
 #ifdef XMAD
         #pragma unroll

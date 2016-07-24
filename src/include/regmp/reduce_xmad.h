@@ -21,6 +21,99 @@ IN THE SOFTWARE.
 ***/
 
 namespace xmp {
+  __device__ __forceinline__ void reduce(RegMP r, RegMP xx, RegMP n, RegMP temp, uint32_t np0) {
+    PTXInliner inliner;
+    int32_t    i, j, size=n.length();
+    uint32_t   q, carry=0, add=0, zero=0, permutation=0x5432;
+
+    if(n.length()!=r.length()) RMP_ERROR("reduce() - length mismatch");
+
+    set_ui(temp, 0);
+    #pragma unroll
+    for(i=0;i<size;i++) {
+      inliner.XMADLL(q, xx[i], np0, zero);
+
+      PTXChain chain1(size+2);
+      chain1.XMADLL(xx[0], q, n[0], xx[i]);
+      inliner.PERMUTE(add, xx[0], add, permutation);
+      #pragma unroll
+      for(j=1;j<size;j++)
+        chain1.XMADLL(xx[i+j], q, n[j], xx[i+j]);
+      chain1.ADD(xx[i+size], xx[i+size], carry);
+      chain1.ADD(carry, zero, zero);
+      chain1.end();
+
+      PTXChain chain2(size);
+      #pragma unroll
+      for(j=0;j<size;j++)
+        chain2.XMADLH(temp[j], q, n[j], temp[j]);
+      chain2.end();
+
+      inliner.ADD_CC(temp[0], temp[0], add);
+      inliner.ADDC(add, zero, zero);
+
+      inliner.XMADLL(q, temp[0], np0, zero);
+
+      PTXChain chain3(size+1);
+      chain3.XMADLL(temp[0], q, n[0], temp[0]);
+      inliner.PERMUTE(add, temp[0], add, permutation);
+      #pragma unroll
+      for(j=1;j<size;j++)
+        chain3.XMADLL(temp[j-1], q, n[j], temp[j]);
+      chain3.ADD(temp[size-1], zero, zero);
+      chain3.end();
+
+      PTXChain chain4(size+1);
+      #pragma unroll
+      for(j=0;j<size;j++)
+        chain4.XMADLH(xx[i+j+1], q, n[j], xx[i+j+1]);
+      chain4.ADD(carry, carry, zero);
+      chain4.end();
+
+      if(i<size-1) {
+        inliner.ADD_CC(xx[i+1], xx[i+1], add);
+        inliner.ADDC(add, zero, zero);
+      }
+    }
+
+    PTXChain chainX(size+1);
+    chainX.ADD(xx[size], xx[size], add);
+    #pragma unroll
+    for(int j=1;j<size;j++)
+      chainX.ADD(xx[j+size], xx[j+size], zero);
+    chainX.ADD(carry, carry, zero);
+    chainX.end();
+
+    // shift RR left by 16 bits
+    #pragma unroll
+    for(int j=size-1;j>0;j--)
+      inliner.PERMUTE(temp[j], temp[j-1], temp[j], permutation);
+    inliner.PERMUTE(temp[0], zero, temp[0], permutation);
+
+    PTXChain chain5(size+1);
+    #pragma unroll
+    for(j=0;j<size;j++)
+      chain5.ADD(xx[j+size], xx[j+size], temp[j]);
+    chain5.ADD(carry, carry, zero);
+    chain5.end();
+
+    carry=-carry;
+    bitwise_and(n, n, carry);
+
+    PTXChain chain6(size);
+    #pragma unroll
+    for(j=0;j<size;j++)
+      chain6.SUB(r[j], xx[j+size], n[j]);
+    chain6.end();
+  }
+
+/*
+  There is a rare carry case that causes this routine to fail.
+  To reproduce, run mod-exp at 512 with the following example:
+    a=b1e451f4e5dbbf65e7901088e87820ed3ce644365acfae8f372e42dfb5c24232c4a1bc48ce5471b20dfc1827c1a5545a19eadbbf7d99579d82b02f036c18d95d
+    b=8ddcf087f521bd3df8748641c40e1d8224548611769b9eb4d0cde0c6bdab8cb2845ea8d4a8585ae9b105a3176125895d30a3d95aba31e458500dd7b7fb665d32
+    c=ffdba45c89ec1b188d3c8f549a32ccafd43b06fb42ec7cb0585c4e2ad78fa438d36b7796b9ea4adcc67e2a97823e5f01adfc2367c241f8e1c83ed4a11a70dde9
+
   __device__ __forceinline__ void reduce(RegMP r, RegMP xx, RegMP n, uint32_t np0) {
     PTXInliner inliner;
     uint32_t   temp, sum, high, carry, zero=0, permuteShift16=0x5432, permuteHighHigh=0x7632, permuteLowLow=0x5410;
@@ -146,6 +239,7 @@ namespace xmp {
       chain10.SUB(r[index], xx[size+index], n[index]);
     chain10.end();
   }
+*/
 
   // FIX FIX FIX - this is the IMAD algorithm
   __device__ __forceinline__ uint32_t _reduce(RegMP xx, RegMP coefficients, RegMP n, uint32_t np0) {

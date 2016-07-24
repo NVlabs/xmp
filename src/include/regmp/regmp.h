@@ -46,6 +46,18 @@ IN THE SOFTWARE.
 #define RMP_ST_GLOBAL_V2    104
 #define RMP_ST_GLOBAL_V4    105
 
+#if defined(IMAD) && defined(XMAD)
+  #pragma error Both IMAD and XMAD are defined
+#endif
+
+#if !defined(IMAD) && !defined(XMAD)
+   #if __CUDA_ARCH__<500
+      #define IMAD
+   #else
+      #define XMAD
+   #endif
+#endif
+
 namespace xmp {
   typedef struct {
     uint32_t *registers;
@@ -112,7 +124,12 @@ namespace xmp {
 
   __device__ void      mul(RegMP rr, RegMP a, RegMP b);
   __device__ void      sqr(RegMP rr, RegMP a);
+#ifdef IMAD
   __device__ void      reduce(RegMP r, RegMP xx, RegMP n, uint32_t np0);
+#endif
+#ifdef XMAD
+  __device__ void      reduce(RegMP r, RegMP xx, RegMP n, RegMP temp, uint32_t np0);
+#endif
 
   // Storage APIs
   __device__ void      load_contiguous_direct(RegMP x, void *base);
@@ -127,18 +144,6 @@ namespace xmp {
   // Debugging
   __device__ void      print(const char *text, RegMP x);
 }
-
-#if defined(IMAD) && defined(XMAD)
-  #pragma error Both IMAD and XMAD are defined
-#endif
-
-#if !defined(IMAD) && !defined(XMAD)
-   #if __CUDA_ARCH__<500
-      #define IMAD
-   #else
-      #define XMAD
-   #endif
-#endif
 
 #include "basics.h"
 #include "assignment.h"
