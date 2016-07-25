@@ -100,13 +100,15 @@ struct divmod_arguments {
 };
 
 struct ar_arguments {
+  uint32_t   precision;     // rounded precision
+  xmpLimb_t *scratch_data;  // scratch data used for warpmp_large_ar_kernel
   xmpLimb_t *window_data;
   xmpLimb_t *a_data;
   xmpLimb_t *mod_data;
-  uint32_t *a_indices;
-  uint32_t *mod_indices;
-  uint32_t  a_indices_count;
-  uint32_t  mod_indices_count;
+  uint32_t  *a_indices;
+  uint32_t  *mod_indices;
+  uint32_t   a_indices_count;
+  uint32_t   mod_indices_count;
   int32_t    window_bits;
   int32_t    a_len;
   int32_t    a_stride;

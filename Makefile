@@ -1,10 +1,10 @@
 
-#ARCH=  -gencode arch=compute_20,code=\"compute_20,sm_20,sm_30\" \
-#			-gencode arch=compute_35,code=\"compute_35,sm_35\" \
-#			-gencode arch=compute_37,code=\"compute_37,sm_37\" \
-#			-gencode arch=compute_50,code=\"compute_50,sm_50,sm_52\" \
+ARCH=  -gencode arch=compute_20,code=\"compute_20,sm_20,sm_30\" \
+			-gencode arch=compute_35,code=\"compute_35,sm_35\" \
+			-gencode arch=compute_37,code=\"compute_37,sm_37\" \
+			-gencode arch=compute_50,code=\"compute_50,sm_50,sm_52\" \
 
-ARCH=  -gencode arch=compute_50,code=\"compute_50,sm_50,sm_52\" 
+#ARCH=  -gencode arch=compute_50,code=\"compute_50,sm_50,sm_52\" 
 
 NVCC_FLAGS=-O3 ${ARCH} -Xcompiler -fPIC -Xcompiler -fvisibility=hidden -lineinfo -Xcompiler -rdynamic  -Xptxas -v
 

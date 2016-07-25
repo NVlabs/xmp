@@ -55,18 +55,18 @@ __global__ void regmp_add_kernel(add_arguments_t add_arguments, int32_t count) {
   RegMP       A(registers, 0, 0, size), B(registers, 0, size, size);
   xmpLimb_t  *data;
   xmpLimb_t   carry, zero=0;
-  
+
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
     int aindex=thread, bindex=thread, outindex=thread;
     if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
     if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
     if(NULL!=out_indices) outindex=out_indices[thread];
-      
+
     data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
-      if(index<a_len) 
+      if(index<a_len)
         A[index]=data[index*a_stride];
       else
         A[index]=0;
@@ -75,7 +75,7 @@ __global__ void regmp_add_kernel(add_arguments_t add_arguments, int32_t count) {
     data=b_data + bindex%b_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
-      if(index<b_len) 
+      if(index<b_len)
         B[index]=data[index*b_stride];
       else
         B[index]=0;
@@ -171,7 +171,7 @@ __global__ void regmp_sub_kernel(sub_arguments_t sub_arguments, int32_t count) {
     if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
     if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
     if(NULL!=out_indices) outindex=out_indices[thread];
-    
+
     data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
@@ -267,7 +267,7 @@ __global__ void regmp_sqr_kernel(sqr_arguments_t sqr_arguments, int32_t count) {
     int aindex=thread, outindex=thread;
     if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
     if(NULL!=out_indices) outindex=out_indices[thread];
-    
+
     data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
@@ -359,7 +359,7 @@ __global__ void regmp_mul_kernel(mul_arguments_t mul_arguments, int32_t count) {
     if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
     if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
     if(NULL!=out_indices) outindex=out_indices[thread];
-    
+
     data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<a_size;index++) {
@@ -524,7 +524,7 @@ __global__ void digitmp_div_kernel(div_arguments_t div_arguments, int32_t count)
     if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
     if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
     if(NULL!=out_indices) outindex=out_indices[thread];
-    
+
     DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), B(false, false, b_data, b_len, b_stride, b_count, bindex);
     DigitMP<size> Q(false, false, q_data, q_len, q_stride, count, outindex);
 
@@ -564,7 +564,7 @@ __global__ void regmp_mod_kernel(mod_arguments_t mod_arguments, int32_t count) {
     if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
     if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
     if(NULL!=out_indices) outindex=out_indices[thread];
-    
+
     data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<a_size;index++) {
@@ -627,7 +627,7 @@ __global__ void digitmp_mod_kernel(mod_arguments_t mod_arguments, int32_t count)
     if(NULL!=a_indices) aindex=a_indices[thread%a_indices_count];
     if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
     if(NULL!=out_indices) outindex=out_indices[thread];
-    
+
     DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), B(false, false, b_data, b_len, b_stride, b_count, bindex);
     DigitMP<size> R(false, false, r_data, r_len, r_stride, count, outindex);
 
@@ -672,7 +672,7 @@ __global__ void regmp_divmod_kernel(divmod_arguments_t divmod_arguments, int32_t
     if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
     if(NULL!=q_indices) qindex=q_indices[thread];
     if(NULL!=r_indices) rindex=r_indices[thread];
-    
+
     data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<a_size;index++) {
@@ -749,7 +749,7 @@ __global__ void digitmp_divmod_kernel(divmod_arguments_t divmod_arguments, int32
     if(NULL!=b_indices) bindex=b_indices[thread%b_indices_count];
     if(NULL!=q_indices) qindex=q_indices[thread];
     if(NULL!=r_indices) rindex=r_indices[thread];
-    
+
     DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), B(false, false, b_data, b_len, b_stride, b_count, bindex);
     DigitMP<size> Q(false, false, q_data, q_len, q_stride, count, qindex), R(false, false, r_data, r_len, r_stride, count, rindex);
 
@@ -789,7 +789,7 @@ __global__ void regmp_ar_kernel(ar_arguments_t ar_arguments, int32_t count) {
     int aindex=thread, modindex=thread;
     if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
     if(NULL!=mod_indices) modindex=mod_indices[modindex%mod_indices_count];
-    
+
     data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
@@ -888,10 +888,10 @@ __global__ void warpmp_small_ar_kernel(ar_arguments_t ar_arguments, int32_t coun
   int32_t    mod_stride=ar_arguments.mod_stride;
   int32_t    mod_count=ar_arguments.mod_count;
   int32_t    width=ar_arguments.width;
-  uint32_t   *a_indices=ar_arguments.a_indices;
-  uint32_t   *mod_indices=ar_arguments.mod_indices;
-  uint32_t    a_indices_count=ar_arguments.a_indices_count;
-  uint32_t    mod_indices_count=ar_arguments.mod_indices_count;
+  uint32_t  *a_indices=ar_arguments.a_indices;
+  uint32_t  *mod_indices=ar_arguments.mod_indices;
+  uint32_t   a_indices_count=ar_arguments.a_indices_count;
+  uint32_t   mod_indices_count=ar_arguments.mod_indices_count;
 
   PTXInliner inliner;
   xmpLimb_t  registers[3*size+2];
@@ -906,7 +906,7 @@ __global__ void warpmp_small_ar_kernel(ar_arguments_t ar_arguments, int32_t coun
     int aindex=thread, modindex=thread;
     if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
     if(NULL!=mod_indices) modindex=mod_indices[modindex%mod_indices_count];
-    
+
     data=a_data + aindex%a_count;
     #pragma unroll
     for(int index=0;index<size;index++) {
@@ -945,6 +945,59 @@ __global__ void warpmp_small_ar_kernel(ar_arguments_t ar_arguments, int32_t coun
 #endif
 }
 
+// size here is the digit size
+template<bool gsl, int32_t size>
+__global__ void warpmp_large_ar_kernel(ar_arguments_t ar_arguments, int32_t count) {
+  uint32_t   precision=ar_arguments.precision;
+  xmpLimb_t *scratch_data=ar_arguments.scratch_data;
+  xmpLimb_t *window_data=ar_arguments.window_data;
+  int32_t    window_bits=ar_arguments.window_bits;
+  xmpLimb_t *a_data=ar_arguments.a_data;
+  int32_t    a_len=ar_arguments.a_len;
+  int32_t    a_stride=ar_arguments.a_stride;
+  int32_t    a_count=ar_arguments.a_count;
+  xmpLimb_t *mod_data=ar_arguments.mod_data;
+  int32_t    mod_len=ar_arguments.mod_len;
+  int32_t    mod_stride=ar_arguments.mod_stride;
+  int32_t    mod_count=ar_arguments.mod_count;
+  int32_t    width=ar_arguments.width;
+  uint32_t  *a_indices=ar_arguments.a_indices;
+  uint32_t  *mod_indices=ar_arguments.mod_indices;
+  uint32_t   a_indices_count=ar_arguments.a_indices_count;
+  uint32_t   mod_indices_count=ar_arguments.mod_indices_count;
+
+  xmpLimb_t  registers[4*size+4];
+  RegMP      ZERO(registers, 0, 0, size);
+  int32_t    digits=divide<size>(precision);
+  int32_t    words=precision/width;
+
+  #pragma nounroll
+  for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
+    int aindex=thread, modindex=thread;
+    if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
+    if(NULL!=mod_indices) modindex=mod_indices[modindex%mod_indices_count];
+    DigitMP<size> A(false, false, a_data, a_len, a_stride, a_count, aindex), MOD(false, false, mod_data, mod_len, mod_stride, mod_count, modindex);
+    DigitMP<size> SCRATCH(false, false, scratch_data, 5*digits+1, thread);
+    DigitMP<size> N(SCRATCH, 0, digits), TEMP(SCRATCH, digits, digits), INVERSE(SCRATCH, 2*digits, digits);
+    DigitMP<size> AR(SCRATCH, 3*digits, 2*digits+1), AR_LOW(SCRATCH, 3*digits, digits), AR_HIGH(SCRATCH, 4*digits, digits);
+    DigitMP<size> WINDOW_N(window_data, width, words, 1<<window_bits, (1<<window_bits)+1, thread);
+    DigitMP<size> WINDOW_REM(window_data, width, words, 1, (1<<window_bits)+1, thread);
+
+    set<size>(registers, N, MOD);
+    set<size>(registers, WINDOW_N, N);
+
+    set_ui<size>(registers, AR_LOW, 0);
+    set<size>(registers, AR_HIGH, A);
+    set_ui(ZERO, 0);
+    AR.store_digit(ZERO, 2*digits);
+
+    _rem(registers, WINDOW_REM, AR, N, TEMP, INVERSE);
+
+    if(!gsl)
+      break;
+  }
+}
+
 template<bool gsl, int _words, int _ks, int _km>
 __global__ void regmp_powm_kernel(powm_arguments_t powm_arguments, int32_t count) {
   xmpLimb_t *out_data=powm_arguments.out_data;
@@ -970,7 +1023,7 @@ __global__ void regmp_powm_kernel(powm_arguments_t powm_arguments, int32_t count
     int expindex=thread, outindex=thread;
     if(NULL!=exp_indices) expindex=exp_indices[thread%exp_indices_count];
     if(NULL!=out_indices) outindex=out_indices[thread];
-    
+
     o=out_data + outindex;
     e=exp_data + expindex%exp_count;
     w=window_data + (thread & ~0x1F)*((1<<window_bits)+4)*_words + (thread & 0x1F);
@@ -1025,7 +1078,7 @@ __global__ void digitmp_powm_kernel(powm_arguments_t powm_arguments, int32_t cou
     int expindex=thread, outindex=thread;
     if(NULL!=exp_indices) expindex=exp_indices[thread%exp_indices_count];
     if(NULL!=out_indices) outindex=out_indices[thread];
-    
+
     e=exp_data + expindex%exp_count;
     o=out_data + outindex;
 
@@ -1067,11 +1120,10 @@ __global__ void warpmp_powm_kernel(powm_arguments_t powm_arguments, int32_t coun
   // exp_len is passed in the bits parameters, mod_len is passed in _words parameter
 
   #pragma nounroll
-  for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
+  for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count*width;thread+=blockDim.x*gridDim.x) {
     int expindex=thread/width, outindex=thread/width;
     if(NULL!=exp_indices) expindex=exp_indices[expindex%exp_indices_count];
     if(NULL!=out_indices) outindex=out_indices[outindex];
-   
 
     o=out_data + outindex*out_len;
     e=exp_data + expindex%exp_count;
@@ -1201,7 +1253,7 @@ __global__ void strided_ior_kernel(ior_arguments_t ior_arguments, int32_t count)
     if(NULL!=l_indices) lindex=l_indices[lindex%l_indices_count];
     if(NULL!=s_indices) sindex=s_indices[sindex%s_indices_count];
     if(NULL!=out_indices) outindex=out_indices[outindex];
-    
+
     l=l_data + lindex%l_count;
     s=s_data + sindex%s_count;
     c=c_data + outindex;
@@ -1239,14 +1291,14 @@ __global__ void strided_and_kernel(and_arguments_t and_arguments, int32_t count)
   uint32_t    *out_indices=and_arguments.out_indices;
 
   xmpLimb_t *l, *s, *c;
-  
+
   #pragma nounroll
   for(int32_t thread=blockIdx.x*blockDim.x+threadIdx.x;thread<count;thread+=blockDim.x*gridDim.x) {
     int lindex=thread, sindex=thread, outindex=thread;
     if(NULL!=l_indices) lindex=l_indices[lindex%l_indices_count];
     if(NULL!=s_indices) sindex=s_indices[sindex%s_indices_count];
     if(NULL!=out_indices) outindex=out_indices[outindex];
-    
+
     l=l_data + lindex%l_count;
     s=s_data + sindex%s_count;
     c=c_data + outindex;
@@ -1289,7 +1341,7 @@ __global__ void strided_xor_kernel(xor_arguments_t xor_arguments, int32_t count)
     if(NULL!=l_indices) lindex=l_indices[lindex%l_indices_count];
     if(NULL!=s_indices) sindex=s_indices[sindex%s_indices_count];
     if(NULL!=out_indices) outindex=out_indices[outindex];
-    
+
     l=l_data + lindex%l_count;
     s=s_data + sindex%s_count;
     c=c_data + outindex;
@@ -1328,7 +1380,7 @@ __global__ void strided_not_kernel(not_arguments_t not_arguments, int32_t count)
     int aindex=thread, cindex=thread;
     if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
     if(NULL!=c_indices) cindex=c_indices[cindex];
-   
+
     a=a_data + aindex%a_count;
     c=c_data + cindex;
 
@@ -1366,7 +1418,7 @@ __global__ void strided_shf_kernel(shf_arguments_t shf_arguments, uint32_t count
     int aindex=thread, outindex=thread;
     if(NULL!=a_indices) aindex=a_indices[aindex%a_indices_count];
     if(NULL!=out_indices) outindex=out_indices[outindex];
-    
+
     int32_t shift=-shift_data[thread%shift_count];
 
     xmpLimb_t *out=c_data+outindex;

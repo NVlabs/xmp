@@ -65,9 +65,9 @@ xmpError_t XMPAPI xmpIntegersAddAsync(xmpHandle_t handle, xmpIntegers_t s, const
 
   XMP_SET_DEVICE(handle);
 
-  if(s->count<count) 
+  if(s->count<count)
     return xmpErrorInvalidCount;
-  
+
   if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
@@ -78,13 +78,13 @@ xmpError_t XMPAPI xmpIntegersAddAsync(xmpHandle_t handle, xmpIntegers_t s, const
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
-  
+
   xmpAlgorithm_t alg = policy->algorithm;
   if(alg==xmpAlgorithmDefault) {
-    if(a->precision<=512 && b->precision<=512) 
+    if(a->precision<=512 && b->precision<=512)
       alg = xmpAlgorithmRegMP;
     else
-      alg = xmpAlgorithmDigitMP;  
+      alg = xmpAlgorithmDigitMP;
   }
 
   // package up the arguments
@@ -186,7 +186,7 @@ xmpError_t XMPAPI xmpIntegersSubAsync(xmpHandle_t handle, xmpIntegers_t d, const
 
   if(d->count<count)
     return xmpErrorInvalidCount;
-  
+
   if(policy->indices[0] && policy->indices_count[0]<count)
     return xmpErrorInvalidCount;
 
@@ -195,13 +195,13 @@ xmpError_t XMPAPI xmpIntegersSubAsync(xmpHandle_t handle, xmpIntegers_t d, const
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
-  
+
   xmpAlgorithm_t alg = policy->algorithm;
   if(alg==xmpAlgorithmDefault) {
-    if(a->precision<=512 && b->precision<512) 
+    if(a->precision<=512 && b->precision<512)
       alg = xmpAlgorithmRegMP;
     else
-      alg = xmpAlgorithmDigitMP;  
+      alg = xmpAlgorithmDigitMP;
   }
 
   // package up the arguments
@@ -311,13 +311,13 @@ xmpError_t XMPAPI xmpIntegersSqrAsync(xmpHandle_t handle, xmpIntegers_t p, const
   }
 
   a->requireFormat(handle, xmpFormatStrided);
-  
+
   xmpAlgorithm_t alg = policy->algorithm;
   if(alg==xmpAlgorithmDefault) {
-    if(a->precision<=512) 
+    if(a->precision<=512)
       alg = xmpAlgorithmRegMP;
     else
-      alg = xmpAlgorithmDigitMP;  
+      alg = xmpAlgorithmDigitMP;
   }
 
   // package up the arguments
@@ -438,13 +438,13 @@ xmpError_t XMPAPI xmpIntegersMulAsync(xmpHandle_t handle, xmpIntegers_t p, const
 
   l->requireFormat(handle, xmpFormatStrided);
   s->requireFormat(handle, xmpFormatStrided);
-  
+
   xmpAlgorithm_t alg = policy->algorithm;
   if(alg==xmpAlgorithmDefault) {
-    if(l->precision<=512 && s->precision<512) 
+    if(l->precision<=512 && s->precision<512)
       alg = xmpAlgorithmRegMP;
     else
-      alg = xmpAlgorithmDigitMP;  
+      alg = xmpAlgorithmDigitMP;
   }
 
 
@@ -534,7 +534,7 @@ xmpError_t XMPAPI xmpIntegersMulAsync(xmpHandle_t handle, xmpIntegers_t p, const
       goto done;
     }
   }
-  else if(alg==xmpAlgorithmDigitMP) {  
+  else if(alg==xmpAlgorithmDigitMP) {
     configureActiveBlocks(handle, blocks, threads, digitmp_mul_kernel<GSL, DIGIT>);
     digitmp_mul_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(mul_arguments, count);
     goto done;
@@ -588,13 +588,13 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
-  
+
   xmpAlgorithm_t alg = policy->algorithm;
   if(alg==xmpAlgorithmDefault) {
-    if(a->precision<=512 && b->precision<512) 
+    if(a->precision<=512 && b->precision<512)
       alg = xmpAlgorithmRegMP;
     else
-      alg = xmpAlgorithmDigitMP;  
+      alg = xmpAlgorithmDigitMP;
   }
 
 
@@ -676,7 +676,7 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
       goto done;
     }
   }
-  else if(alg==xmpAlgorithmDigitMP) {    
+  else if(alg==xmpAlgorithmDigitMP) {
     int32_t digits=DIV_ROUND_UP(a->precision, DIGIT*32) + DIV_ROUND_UP(b->precision, DIGIT*32) + 2;
     size_t  bytes=digits*DIGIT*sizeof(xmpLimb_t);
 
@@ -692,7 +692,7 @@ xmpError_t XMPAPI xmpIntegersDivAsync(xmpHandle_t handle, xmpIntegers_t q, const
 
     if(inplace)
       div_arguments.scratch=(xmpLimb_t *)(reinterpret_cast<char*>(handle->scratch)+out_size);
-    else  
+    else
       div_arguments.scratch=(xmpLimb_t *)handle->scratch;
 
     configureActiveBlocks(handle, blocks, threads, digitmp_div_kernel<GSL, DIGIT>);
@@ -748,13 +748,13 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
-  
+
   xmpAlgorithm_t alg = policy->algorithm;
   if(alg==xmpAlgorithmDefault) {
-    if(a->precision<=512 && b->precision<512) 
+    if(a->precision<=512 && b->precision<512)
       alg = xmpAlgorithmRegMP;
     else
-      alg = xmpAlgorithmDigitMP;  
+      alg = xmpAlgorithmDigitMP;
   }
 
   // package up the arguments
@@ -849,7 +849,7 @@ xmpError_t XMPAPI xmpIntegersModAsync(xmpHandle_t handle, xmpIntegers_t m, const
 
     if(inplace)
       mod_arguments.scratch=(xmpLimb_t *)(reinterpret_cast<char*>(handle->scratch)+out_size);
-    else  
+    else
       mod_arguments.scratch=(xmpLimb_t *)handle->scratch;
 
     configureActiveBlocks(handle, blocks, threads, digitmp_mod_kernel<GSL, DIGIT>);
@@ -909,13 +909,13 @@ xmpError_t XMPAPI xmpIntegersDivModAsync(xmpHandle_t handle, xmpIntegers_t q, xm
 
   a->requireFormat(handle, xmpFormatStrided);
   b->requireFormat(handle, xmpFormatStrided);
-  
+
   xmpAlgorithm_t alg = policy->algorithm;
   if(alg==xmpAlgorithmDefault) {
-    if(a->precision<=512 && b->precision<512) 
+    if(a->precision<=512 && b->precision<512)
       alg = xmpAlgorithmRegMP;
     else
-      alg = xmpAlgorithmDigitMP;  
+      alg = xmpAlgorithmDigitMP;
   }
 
   // package up the arguments
@@ -1058,12 +1058,12 @@ xmpError_t XMPAPI xmpIntegersPowm(xmpHandle_t handle, xmpIntegers_t out, const x
 }
 
 xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t count) {
-  int              device=handle->device;
-  int              bits, windowBits, words, width, add;
-  size_t           windowBytes;
-  xmpError_t       error;
-  ar_arguments_t   ar_arguments;
-  powm_arguments_t powm_arguments;
+  int                  device=handle->device;
+  int                  bits, windowBits, words, width, add;
+  size_t               windowBytes, scratchBytes=0;
+  xmpError_t           error;
+  ar_arguments_t       ar_arguments;
+  powm_arguments_t     powm_arguments;
   xmpExecutionPolicy_t policy=handle->policy;
 
   //verify out, base, exp, mod devices all match handle device
@@ -1102,16 +1102,16 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
   // heuristic for picking crossovers
   words=0;
   width=0;
-  
+
   xmpAlgorithm_t alg = policy->algorithm;
 
   if(alg==xmpAlgorithmDefault) {
-    if(precision<=512) 
+    if(precision<=512)
       alg = xmpAlgorithmRegMP;
-    else if(precision<=1024)
+    else if(precision<=2048)
       alg = xmpAlgorithmDistributedMP;  //TODO support higher bit counts with distributed
     else
-      alg = xmpAlgorithmDigitMP;  
+      alg = xmpAlgorithmDigitMP;
   }
 
   if(alg==xmpAlgorithmDistributedMP) {
@@ -1155,6 +1155,16 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
           width=4;
         }
       }
+      else if(precision<=1536) {
+        words=6;
+        width=8;
+        scratchBytes=(1536*5+DIGIT*32)/8;   // five 1536 bit values, plus a digit.
+      }
+      else if(precision<=2048) {
+        words=8;
+        width=8;
+        scratchBytes=(2048*5+DIGIT*32)/8;   // five 2048 bit values, plus a digit.
+      }
     }
   }
 
@@ -1172,8 +1182,9 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
     windowBytes=((1<<windowBits)+add)*ROUND_UP(DIV_ROUND_UP(precision, 32), DIGIT)*4;
 
   windowBytes*=ROUND_UP(count, GEOMETRY);
+  scratchBytes*=ROUND_UP(count, GEOMETRY);
 
-  error=xmpSetNecessaryScratchSize(handle, windowBytes);
+  error=xmpSetNecessaryScratchSize(handle, windowBytes + scratchBytes);
   if(error!=xmpErrorSuccess)
     return error;
 
@@ -1275,9 +1286,17 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
       goto donear;
     }
     else {
-      // FIX FIX FIX
-      // need a warpmp_large_ar_kernel that uses digitized AR
-      return xmpErrorUnsupported;
+      dim3 blocks(DIV_ROUND_UP(count, GEOMETRY)), threads(GEOMETRY);
+
+      if((words*width % DIGIT)!=0) {
+        // Internal error - the warpmp_large_ar_kernel will fail if word*width is not evenly divisible by the digit size
+        return xmpErrorUnsupported;
+      }
+      ar_arguments.precision=words*width;
+      ar_arguments.scratch_data=(xmpLimb_t *)handle->scratch + (windowBytes/4);
+      configureActiveBlocks(handle, blocks, threads, warpmp_large_ar_kernel<GSL, DIGIT>);
+      warpmp_large_ar_kernel<GSL, DIGIT><<<blocks, threads, 0, handle->stream>>>(ar_arguments, count);
+      goto donear;
     }
   }
   else if(alg==xmpAlgorithmDigitMP) {
@@ -1332,42 +1351,42 @@ donear:
       dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
 
       configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 1>);
-      warpmp_powm_kernel<GSL, 1><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      warpmp_powm_kernel<GSL, 1><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
       goto donepowm;
     }
     else if(words==2) {
       dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
 
       configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 2>);
-      warpmp_powm_kernel<GSL, 2><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      warpmp_powm_kernel<GSL, 2><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
       goto donepowm;
     }
     else if(words==3) {
       dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
 
       configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 3>);
-      warpmp_powm_kernel<GSL, 3><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      warpmp_powm_kernel<GSL, 3><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
       goto donepowm;
     }
     else if(words==4) {
       dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
 
       configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 4>);
-      warpmp_powm_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      warpmp_powm_kernel<GSL, 4><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
       goto donepowm;
     }
     else if(words==6) {
       dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
 
       configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 6>);
-      warpmp_powm_kernel<GSL, 6><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      warpmp_powm_kernel<GSL, 6><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
       goto donepowm;
     }
     else if(words==8) {
       dim3 blocks(DIV_ROUND_UP(count*width, GEOMETRY)), threads(GEOMETRY);
 
       configureActiveBlocks(handle, blocks, threads, warpmp_powm_kernel<GSL, 8>);
-      warpmp_powm_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count*width);
+      warpmp_powm_kernel<GSL, 8><<<blocks, threads, 0, handle->stream>>>(powm_arguments, count);
       goto donepowm;
     }
     else {
@@ -1718,9 +1737,7 @@ xmpError_t XMPAPI xmpIntegersIorAsync(xmpHandle_t handle, xmpIntegers_t c, const
     cudaMemcpyAsync(c->slimbs,ior_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
   }
 
-
   c->setFormat(xmpFormatStrided);
-
   return xmpErrorSuccess;
 }
 //computes c=a&b
@@ -1807,7 +1824,6 @@ xmpError_t XMPAPI xmpIntegersAndAsync(xmpHandle_t handle, xmpIntegers_t c, const
   }
 
   c->setFormat(xmpFormatStrided);
-
   return xmpErrorSuccess;
 }
 //computes c=a^b
@@ -1894,7 +1910,6 @@ xmpError_t XMPAPI xmpIntegersXorAsync(xmpHandle_t handle, xmpIntegers_t c, const
   }
 
   c->setFormat(xmpFormatStrided);
-
   return xmpErrorSuccess;
 }
 //computes c=!a
@@ -1943,11 +1958,11 @@ xmpError_t XMPAPI xmpIntegersNotAsync(xmpHandle_t handle, xmpIntegers_t c, const
   not_arguments.out_indices=policy->indices[0];
   not_arguments.a_indices=policy->indices[1];
   not_arguments.a_indices_count=policy->indices_count[1];
-  
+
   //if c is in-place we need to work in scratch memory
   bool inplace=(c==a);
   size_t out_size=c->stride*c->nlimbs*sizeof(xmpLimb_t);
-  
+
   if(inplace) {
     xmpError_t error;
     error=xmpSetNecessaryScratchSize(handle, out_size);
@@ -1959,13 +1974,12 @@ xmpError_t XMPAPI xmpIntegersNotAsync(xmpHandle_t handle, xmpIntegers_t c, const
 
   configureActiveBlocks(handle, blocks, threads, strided_not_kernel<GSL>);
   strided_not_kernel<GSL><<<blocks, threads, 0, handle->stream>>>(not_arguments, count);
-  
+
   if(inplace) {
     cudaMemcpyAsync(c->slimbs,not_arguments.out_data,out_size,cudaMemcpyDeviceToDevice,handle->stream);
   }
 
   c->setFormat(xmpFormatStrided);
-
   return xmpErrorSuccess;
 }
 //compute c=popc(a)

@@ -61,6 +61,10 @@ namespace xmp {
     xmpDigitStorage_shared_internal_v2,
 
     xmpDigitStorage_shared_chunked_internal_v2,    // chunked only works if _size is divisible by 8
+
+    xmpDigitStorage_warp_distributed_v1,
+    xmpDigitStorage_warp_distributed_v2,
+    xmpDigitStorage_warp_distributed_v4,
   } xmpDigitStorage_t;
 
   template<uint32_t denominator>
@@ -94,6 +98,8 @@ namespace xmp {
       int32_t            _digits;
       int32_t            _length;
       uint32_t           _stride;
+      int32_t            _width;
+      int32_t            _words;
 
       __device__ __forceinline__ DigitMP() {
       }
@@ -123,13 +129,15 @@ namespace xmp {
         _digits=digits;
         _length=length;
         _stride=stride;
+        _width=0;
+        _words=0;
       }
 
       // used for constructing internal values, i.e., no bound checking required
       __device__ __forceinline__ DigitMP(bool compact, bool useTextureCache, uint32_t *base, int32_t digits, int32_t thread=-1) {
         if(thread<0)
           thread=blockIdx.x*blockDim.x+threadIdx.x;
-        
+
         if(compact) {
           if(useTextureCache) {
             if(_size%4!=0)
@@ -161,6 +169,25 @@ namespace xmp {
         _digits=digits;
         _length=0;
         _stride=32;
+        _width=0;
+        _words=0;
+      }
+
+      // used to construct a warp_distributed internal value with no bounds checking
+      __device__ __forceinline__ DigitMP(uint32_t *base, int32_t width, int32_t words, int32_t index, int32_t count, int32_t thread=-1) {
+        int32_t digits=divide<_size>(width*words);    // remainder must be zero
+
+        if(thread<0)
+          thread=blockIdx.x*blockDim.x+threadIdx.x;
+
+        _base=base + (thread*width & ~0x1F)*count*words + (thread*width & 0x1F);
+        _storage=xmpDigitStorage_warp_distributed_v1;
+        _start=index*digits;
+        _digits=digits;
+        _length=0;
+        _stride=32;
+        _width=width;
+        _words=words;
       }
 
       // used for constructing shared internal values, i.e., no bound checking required
@@ -169,7 +196,7 @@ namespace xmp {
 
         if(thread<0)
           thread=threadIdx.x;
-        
+
         if(_size%8==0) {       // use chunks of 8 words
           _storage=xmpDigitStorage_shared_chunked_internal_v2;
           _base=base + thread%count*8;
@@ -187,6 +214,8 @@ namespace xmp {
         _digits=digits;
         _length=0;
         _stride=count;
+        _width=0;
+        _words=0;
       }
 
       __device__ __forceinline__ DigitMP(DigitMP<_size> source, int32_t start, int32_t digits) {
@@ -196,6 +225,8 @@ namespace xmp {
         _digits=digits;
         _length=source._length;
         _stride=source._stride;
+        _width=0;
+        _words=0;
       }
 
       __device__ __forceinline__ void set(DigitMP<_size> source) {
@@ -205,6 +236,8 @@ namespace xmp {
         _digits=source._digits;
         _length=source._length;
         _stride=source._stride;
+        _width=0;
+        _words=0;
       }
 
       __device__ __forceinline__ int32_t digits() {
@@ -347,6 +380,17 @@ namespace xmp {
             base=base+_stride*4;
           }
         }
+
+        // warp distributed
+        if(_storage==xmpDigitStorage_warp_distributed_v1) {
+          RMP_ERROR("load_digit() - can't load warp_distributed");
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_v2) {
+          RMP_ERROR("load_digit() - can't load warp_distributed");
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_v4) {
+          RMP_ERROR("load_digit() - can't load warp_distributed");
+        }
       }
 
       __device__ __forceinline__ void store_digit(RegMP x, int32_t digit) {
@@ -456,6 +500,23 @@ namespace xmp {
             base=base+_stride*4;
           }
         }
+
+        // warp distributed
+        if(_storage==xmpDigitStorage_warp_distributed_v1) {
+          uint32_t *base=_base + _start*_size*(32/_width);
+          int32_t   offset=digit*_size;
+
+          #pragma unroll
+          for(int32_t word=0;word<_size;word++)
+            base[(word+offset)/_words + (word+offset)%_words*32]=x[word];
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_v2) {
+          RMP_ERROR("store_digit() - store v2 not supported yet");
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_v4) {
+          RMP_ERROR("load_digit() - store v4 not supported yet");
+        }
+
       }
 
       __device__ __forceinline__ uint32_t load_digit_word(int32_t digit, int32_t offset) {
@@ -567,6 +628,17 @@ namespace xmp {
             return data2.x;
           else
             return data2.y;
+        }
+
+        // warp distributed
+        if(_storage==xmpDigitStorage_warp_distributed_v1) {
+          RMP_ERROR("load_digit_word() - can't load warp_distributed");
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_v2) {
+          RMP_ERROR("load_digit_word() - can't load warp_distributed");
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_v4) {
+          RMP_ERROR("load_digit_word() - can't load warp_distributed");
         }
 
         return 0;
