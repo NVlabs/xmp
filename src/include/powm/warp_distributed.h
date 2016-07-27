@@ -81,7 +81,7 @@ namespace xmp {
 
         if(_words==1) {
           if(groupThread<out_len)
-            out_data[groupThread]=_registers[0];
+            out_data[groupThread * out_stride]=_registers[0];
         }
         else {
           RegMP A(_registers, 0, 0, _words);
@@ -89,7 +89,7 @@ namespace xmp {
           #pragma unroll
           for(int word=0;word<_words;word++) {
             if(groupThread*_words+word<out_len)
-              out_data[groupThread*_words+word]=A[word];
+              out_data[groupThread*_words*out_stride + word*out_stride]=A[word];
           }
         }
       }

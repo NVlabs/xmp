@@ -28,6 +28,8 @@ IN THE SOFTWARE.
 #define DIGIT 8
 #define GSL true
 
+#include "powm_operators.h"
+
 template<class T>
 void configureActiveBlocks(xmpHandle_t handle, dim3 &blocks, dim3 threads, T *kernel) {
   int         maxBlocks;
@@ -39,7 +41,6 @@ void configureActiveBlocks(xmpHandle_t handle, dim3 &blocks, dim3 threads, T *ke
       blocks.x=maxBlocks*handle->smCount;
   }
 }
-
 
 //computes s=a+b
 xmpError_t XMPAPI xmpIntegersAdd(xmpHandle_t handle, xmpIntegers_t s, const xmpIntegers_t a, const xmpIntegers_t b, uint32_t count) {
@@ -1057,6 +1058,8 @@ xmpError_t XMPAPI xmpIntegersPowm(xmpHandle_t handle, xmpIntegers_t out, const x
   return xmpErrorSuccess;
 }
 
+
+/*
 xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t count) {
   int                  device=handle->device;
   int                  bits, windowBits, words, width, add;
@@ -1466,6 +1469,7 @@ donepowm:
   XMP_CHECK_CUDA();
   return xmpErrorSuccess;
 }
+*/
 
 //compute c=CMP(a,b),  -1 a is smaller, 0 equal, +1 a is larger
 xmpError_t XMPAPI xmpIntegersCmp(xmpHandle_t handle, int32_t *c, const xmpIntegers_t a, const xmpIntegers_t b, uint32_t count) {
