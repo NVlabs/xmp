@@ -1191,10 +1191,11 @@ TEST_P(PowmTest,opTests) {
   
   //disable dynamic indexing
   ASSERT_EQ(xmpErrorSuccess,xmpHandleSetExecutionPolicy(handle,NULL));
-  
+ 
+  uint32_t nlimbs;
   //export from xmp
-  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,NULL,-1,sizeof(uint32_t),-1,0,x_c,cN));
-
+  ASSERT_EQ(xmpErrorSuccess,xmpIntegersExportAsync(handle,d_res,&nlimbs,-1,sizeof(uint32_t),-1,0,x_c,cN));
+  ASSERT_EQ(nlimbs,climbs);
   //import to mpz
 #pragma omp parallel for
   for(int i=0;i<bN;i++) mpz_import(g_b[i],blimbs,-1,sizeof(uint32_t),-1,0,&h_b[i*blimbs]);
@@ -2834,7 +2835,7 @@ INSTANTIATE_TEST_CASE_P(DistributedPowmTests, PowmTest, ::testing::Values(
 
       PowmParams(1024,1024,1024,1024,N,N,N,N,N,xmpAlgorithmDistributedMP),
       PowmParams(1024,1024,1024,1024,N,N,1,1,N,xmpAlgorithmDistributedMP),
-#if 0
+#if 1
       PowmParams(2048,2048,2048,2048,N,N,N,N,N,xmpAlgorithmDistributedMP),
       PowmParams(2048,2048,2048,2048,N,N,1,1,N,xmpAlgorithmDistributedMP),
       PowmParams(4096,4096,4096,4096,N,N,N,N,N,xmpAlgorithmDistributedMP),
@@ -2850,9 +2851,9 @@ INSTANTIATE_TEST_CASE_P(DistributedPowmTests, PowmTest, ::testing::Values(
       PowmParams(320,320,320,320,N,N,N,N,N,xmpAlgorithmDistributedMP),
       PowmParams(352,352,352,352,N,N,N,N,N,xmpAlgorithmDistributedMP),
       PowmParams(384,384,384,384,N,N,N,N,N,xmpAlgorithmDistributedMP),
-      PowmParams(544,544,544,544,N,N,N,N,N,xmpAlgorithmDistributedMP)
+      PowmParams(544,544,544,544,N,N,N,N,N,xmpAlgorithmDistributedMP),
       
-#if 0
+#if 1
       PowmParams(1056,1056,1056,1056,N,N,N,N,N,xmpAlgorithmDistributedMP),
       PowmParams(2080,2080,2080,2080,N,N,N,N,N,xmpAlgorithmDistributedMP)
 #endif
@@ -2896,7 +2897,8 @@ INSTANTIATE_TEST_CASE_P(DistributedPowmTests, PowmTest, ::testing::Values(
       PowmParams(8192,8192,8192,8192,N,N,N,N,N,xmpAlgorithmDigitMP),
       PowmParams(8192,8192,8192,8192,N,N,1,1,N,xmpAlgorithmDigitMP),
  
-#if 0
+
+#if 1
       PowmParams(160,160,160,160,N,N,N,N,N,xmpAlgorithmDigitMP),
       PowmParams(192,192,192,192,N,N,N,N,N,xmpAlgorithmDigitMP),
       PowmParams(224,224,224,224,N,N,N,N,N,xmpAlgorithmDigitMP),

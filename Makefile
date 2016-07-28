@@ -1,5 +1,5 @@
 
-ARCH=  -gencode arch=compute_20,code=\"compute_20,sm_20,sm_30\" \
+ARCH=  -gencode arch=compute_30,code=\"compute_30,sm_30\" \
 			-gencode arch=compute_35,code=\"compute_35,sm_35\" \
 			-gencode arch=compute_37,code=\"compute_37,sm_37\" \
 			-gencode arch=compute_50,code=\"compute_50,sm_50,sm_52\" \
