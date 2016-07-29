@@ -116,7 +116,6 @@ struct LaunchParameters
 
 
 LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision, uint32_t count, xmpAlgorithm_t alg ) {
-  
   const Latency * lookup;
   uint32_t tbl_count;
   
@@ -140,7 +139,6 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
 
   idx=0;
   for(int i=0;i<xmpPowmPrecisionsCount;i++) {
-    
     if(precision<=xmpPowmPrecisions[i]) {
       idx=i;
       break;
@@ -1237,9 +1235,8 @@ xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, co
     if(params.alg_index==-1)
       return xmpErrorUnsupported;
     uint32_t lcount=params.count;
-
     xmpPowmAlgorithm algorithm=xmpPowmAlgorithms[params.alg_index];
-    xmpError_t error=algorithm.pfunc(handle, out, a, exp, mod, 0, lcount, NULL, NULL);
+    xmpError_t error=algorithm.pfunc(handle, out, a, exp, mod, start, lcount, NULL, NULL);
     if(error!=xmpErrorSuccess) {
       return error;
     }
