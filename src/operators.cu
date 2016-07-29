@@ -170,8 +170,10 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
       max_throughput=throughput;
     }
   }
-  uint32_t waves = count/params.count;
-  params.count = waves*params.count;
+  //hueristic:  launch as many waves of this size as possible,  we see better proformance with mulitple waves than single waves.  
+  //This is likely due to launch latency.
+  uint32_t waves = count/params.count;  //number of waves that could fit in the full size
+  params.count = waves*params.count;    //scale count by that many waves
   //printf("POWM: precison: %d, count: %d, lcount: %d,  alg: %d\n", precision, count, params.count, params.alg_index);
   return params;
 }
