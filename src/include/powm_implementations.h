@@ -1,3 +1,5 @@
+#include <arguments.h>
+
 template<int32_t _size>
 __global__ void regmp_ar_kernel(ar_arguments_t ar_arguments, int32_t start, int32_t count) {
   int32_t    thread;

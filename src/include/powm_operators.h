@@ -1,14 +1,16 @@
+#pragma once
+
 #define AR_GEOMETRY 128
 #define AR_DIGIT 8
 
 typedef void (*powm_kernel)(powm_arguments_t powm_arguments, int32_t start, int32_t count);
 
 template<class T>
-void determineMaxBlocks(T *kernel, int32_t threads, int32_t *blocks_per_sm) {
+inline void determineMaxBlocks(T *kernel, int32_t threads, int32_t *blocks_per_sm) {
   cudaOccupancyMaxActiveBlocksPerMultiprocessor(blocks_per_sm, kernel, threads, 0);
 }
 
-uint32_t windowBitsForPrecision(uint32_t precision) {
+inline uint32_t windowBitsForPrecision(uint32_t precision) {
   uint32_t windowBits;
 
   // these are not tuned
@@ -27,7 +29,7 @@ uint32_t windowBitsForPrecision(uint32_t precision) {
 }
 
 template<int32_t geometry, int32_t min_blocks, int32_t words, int32_t kar_mult, int32_t kar_sqr>
-xmpError_t XMPAPI internalPowmRegMP(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, uint32_t *instances_per_block, uint32_t *blocks_per_sm) {
+xmpError_t /*XMPAPI*/ internalPowmRegMP(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, uint32_t *instances_per_block, uint32_t *blocks_per_sm) {
   // geometry - # of threads per block
   // min_blocks - used for launch bounds
   // words is the size of the modulus in words
@@ -310,117 +312,33 @@ xmpError_t XMPAPI internalPowmWarpDistributedMP(xmpHandle_t handle, xmpIntegers_
   return xmpErrorSuccess;
 }
 
-xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t count) {
-  int                  device=handle->device;
-  xmpExecutionPolicy_t policy=handle->policy;
+xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t count);
 
-  //verify out, base, exp, mod devices all match handle device
-  if(out->device!=device || a->device!=device || exp->device!=device || mod->device!=device)
-    return xmpErrorInvalidDevice;
+struct Latency {
+  uint32_t alg_index;
+  float latency;
+  uint32_t instances_per_sm;
 
-  if(count==0)
-    return xmpErrorSuccess;
+  Latency(uint32_t alg_index, float latency, uint32_t instances_per_sm) : alg_index(alg_index), latency(latency), instances_per_sm(instances_per_sm) {}
+};
 
-  int32_t precision=out->precision;
+typedef xmpError_t (*xmpPowmFunc)(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, uint32_t *instances_per_block, uint32_t *blocks_per_sm);
 
-  if(out->count<count)
-    return xmpErrorInvalidCount;
+struct xmpPowmAlgorithm {
+  xmpAlgorithm_t alg;
+  xmpPowmFunc pfunc;
+  uint32_t min_precision;
+  uint32_t max_precision;
 
-  if(policy->indices[0] && policy->indices_count[0]<count)
-    return xmpErrorInvalidCount;
+  xmpPowmAlgorithm(xmpAlgorithm_t alg, xmpPowmFunc pfunc, uint32_t min_precision, uint32_t max_precision) :
+    alg(alg), pfunc(pfunc), min_precision(min_precision), max_precision(max_precision) {}
+};
 
-  if(out->precision!=precision || a->precision!=precision || mod->precision!=precision)
-    return xmpErrorInvalidPrecision;
 
-  xmpAlgorithm_t alg = policy->algorithm;
+extern xmpPowmAlgorithm xmpPowmAlgorithms[];
+extern uint32_t xmpPowmAlgorithmsCount;
 
-  if(alg==xmpAlgorithmDefault) {
-    if(count<handle->smCount*512 && handle->arch>=30 && precision<=8192)
-      alg=xmpAlgorithmDistributedMP;   // for a small number of instances, use distributed
-    else if(precision<=512)
-      alg=xmpAlgorithmRegMP;
-    else if(precision<=8192)
-      alg=xmpAlgorithmDistributedMP;   // for now... distributed seems to always outperfm digitized
-    else
-      alg=xmpAlgorithmDigitMP;
-  }
+extern uint32_t xmpPowmPrecisions[];
+extern uint32_t xmpPowmPrecisionsCount;
 
-  if(alg==xmpAlgorithmRegMP) {
-    out->setFormat(xmpFormatStrided);
-    if(precision<=128)
-      return internalPowmRegMP<128, 4, 4, 0, 0>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-    else if(precision<=256)
-      return internalPowmRegMP<128, 4, 8, 0, 0>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-    else if(precision<=384)
-      return internalPowmRegMP<128, 4, 12, 0, 0>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-    else if(precision<=512)
-      return internalPowmRegMP<128, 4, 16, 0, 0>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-    else
-      return xmpErrorUnsupported;
-  }
 
-  if(alg==xmpAlgorithmDigitMP) {
-    out->setFormat(xmpFormatStrided);
-    return internalPowmDigitMP<128, 4, DIGIT>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-  }
-
-  if(alg==xmpAlgorithmDistributedMP) {
-    out->setFormat(xmpFormatCompact);   // so I can test before the copy out kernels are done
-    if(count<handle->smCount*256) {
-      // use smallest number of words, to achieve lowest latency
-      if(precision<=128)
-        return internalPowmWarpDistributedMP<128, 4, 4, 1>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=256)
-        return internalPowmWarpDistributedMP<128, 4, 8, 1>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=384)
-        return internalPowmWarpDistributedMP<128, 4, 4, 3>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=512)
-        return internalPowmWarpDistributedMP<128, 4, 16, 1>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=1024)
-        return internalPowmWarpDistributedMP<128, 4, 32, 1>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=1536)
-        return internalPowmWarpDistributedMP<128, 4, 16, 3>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=2048)
-        return internalPowmWarpDistributedMP<128, 4, 32, 2>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=3072)
-        return internalPowmWarpDistributedMP<128, 4, 32, 3>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=4096)
-        return internalPowmWarpDistributedMP<128, 4, 32, 4>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=6144)
-        return internalPowmWarpDistributedMP<128, 4, 32, 6>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=8192)
-        return internalPowmWarpDistributedMP<128, 4, 32, 8>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else
-        return xmpErrorUnsupported;
-    }
-    else {
-      // use largest number of words to achieve highest throughput
-      if(precision<=128)
-        return internalPowmWarpDistributedMP<128, 4, 2, 2>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=256)
-        return internalPowmWarpDistributedMP<128, 4, 2, 4>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=384)
-        return internalPowmWarpDistributedMP<128, 4, 2, 6>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=512)
-        return internalPowmWarpDistributedMP<128, 4, 2, 8>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=1024)
-        return internalPowmWarpDistributedMP<128, 4, 4, 8>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=1536)
-        return internalPowmWarpDistributedMP<128, 4, 8, 6>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=2048)
-        return internalPowmWarpDistributedMP<128, 4, 8, 8>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=3072)
-        return internalPowmWarpDistributedMP<128, 4, 16, 6>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=4096)
-        return internalPowmWarpDistributedMP<128, 4, 16, 8>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=6144)
-        return internalPowmWarpDistributedMP<128, 4, 32, 6>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else if(precision<=8192)
-        return internalPowmWarpDistributedMP<128, 4, 32, 8>(handle, out, a, exp, mod, 0, count, NULL, NULL);
-      else
-        return xmpErrorUnsupported;
-    }
-  }
-
-  return xmpErrorUnsupported;
-}

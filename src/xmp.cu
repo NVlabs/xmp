@@ -20,7 +20,6 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ***/
 #include "xmp_internal.h"
-#include "operators.h"
 #include <thrust/scan.h>
 #include <thrust/unique.h>
 #include <thrust/device_ptr.h>
@@ -805,3 +804,5 @@ __global__ void xmpS2C_kernel(uint32_t N, uint32_t limbs, uint32_t stride, const
     }
   }
 }
+
+

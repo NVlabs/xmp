@@ -6,7 +6,7 @@ ARCH=  -gencode arch=compute_30,code=\"compute_30,sm_30\" \
 
 #ARCH=  -gencode arch=compute_50,code=\"compute_50,sm_50,sm_52\" 
 
-NVCC_FLAGS=-O3 ${ARCH} -Xcompiler -fPIC -Xcompiler -fvisibility=hidden -lineinfo -Xcompiler -rdynamic  -Xptxas -v
+NVCC_FLAGS=--std=c++11 -O3 ${ARCH} -Xcompiler -fPIC -Xcompiler -fvisibility=hidden -lineinfo -Xcompiler -rdynamic  -Xptxas -v
 
 
 .PHONY: libs all samples unit_tests perf_tests clean tests
@@ -16,24 +16,36 @@ INCLUDES=$(wildcard ${INC}/*.h) $(wildcard ${INC}/*/*.h)
 
 libs:  libxmp.a libxmp.so
 
-all: libs samples unit_tests perf_tests
+all: libs samples unit_tests perf_tests tune
 
 xmp.o: src/xmp.cu ${INCLUDES}
 	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
 
-libxmp.a: xmp.o
+operators.o: src/operators.cu ${INCLUDES}
+	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
+
+instantiations.o: src/instantiations/instantiations.cu ${INCLUDES}
+	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
+
+tune.o: src/tune.cu 
+	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
+
+tune: tune.o xmp.o operators.o instantiations.o
+	nvcc ${NVCC_FLAGS} $^ -o $@
+
+libxmp.a: xmp.o operators.o instantiations.o
 	nvcc ${NVCC_FLAGS} --lib $^ -o $@ 
 
-libxmp.so: xmp.o
+libxmp.so: xmp.o operators.o instantiations.o
 	nvcc ${NVCC_FLAGS} --shared $^ -o $@ 
 
-samples:
+samples: libs
 	make -C samples
 
-unit_tests:
+unit_tests: libs
 	make -C unit_tests
 
-perf_tests:
+perf_tests: libs
 	make -C perf_tests
 
 clean:
