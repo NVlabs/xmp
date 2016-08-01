@@ -127,7 +127,7 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
 
   int idx;
   if(precision>xmpPowmPrecisions[xmpPowmPrecisionsCount-1]) {
-    if(!(alg==xmpAlgorithmDefault && alg==xmpAlgorithmDigitMP))
+    if(alg!=xmpAlgorithmDefault && alg!=xmpAlgorithmDigitMP)
       return LaunchParameters();
 
     LaunchParameters params;
