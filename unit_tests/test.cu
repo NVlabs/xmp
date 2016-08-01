@@ -2890,6 +2890,7 @@ INSTANTIATE_TEST_CASE_P(DistributedPowmTests, PowmTest, ::testing::Values(
       ));
 
  INSTANTIATE_TEST_CASE_P(DigitMPPowmTests, PowmTest, ::testing::Values( 
+      PowmParams(8192,8192,8192,8192,49152,49152,49152,49152,18432,xmpAlgorithmDigitMP),
       PowmParams(1056,1056,1056,1056,N,N,N,N,N,xmpAlgorithmDigitMP),
       PowmParams(2080,2080,2080,2080,N,N,N,N,N,xmpAlgorithmDigitMP),
       PowmParams(6144,6144,6144,6144,N,N,1,1,N,xmpAlgorithmDigitMP),
