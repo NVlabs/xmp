@@ -57,6 +57,7 @@ extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,6>(xmpHandle_t
 extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
 extern template xmpError_t internalPowmDigitMP<128,4,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t*);
 
+//uint32_t xmpPowmPrecisions[]={128,256,512,768,1024,1536,2048,3072,4096,6144,8192};
 uint32_t xmpPowmPrecisions[]={128,256,512,768,1024,1536,2048,3072,4096};
 uint32_t xmpPowmPrecisionsCount = sizeof(xmpPowmPrecisions)/sizeof(uint32_t);
 
@@ -99,7 +100,7 @@ xmpPowmAlgorithm xmpPowmAlgorithms[] = {
   xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,32,8>,6145,8192),
 #endif
   //Digitized
-  xmpPowmAlgorithm(xmpAlgorithmDigitMP,(xmpPowmFunc)internalPowmDigitMP<128,4,8>,1,uint32_t(-1)),
+  xmpPowmAlgorithm(xmpAlgorithmDigitMP,(xmpPowmFunc)internalPowmDigitMP<128,4,8>,512,uint32_t(-1)),
 };
 uint32_t xmpPowmAlgorithmsCount = sizeof(xmpPowmAlgorithms)/sizeof(xmpPowmAlgorithm);
 
@@ -126,7 +127,7 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
 
   int idx;
   if(precision>xmpPowmPrecisions[xmpPowmPrecisionsCount-1]) {
-    if(alg!=xmpAlgorithmDefault || alg!=xmpAlgorithmDigitMP)
+    if(!(alg==xmpAlgorithmDefault && alg==xmpAlgorithmDigitMP))
       return LaunchParameters();
 
     LaunchParameters params;
@@ -1208,7 +1209,6 @@ xmpError_t XMPAPI xmpIntegersPowm(xmpHandle_t handle, xmpIntegers_t out, const x
 xmpError_t XMPAPI xmpIntegersPowmAsync(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t count) {
   int                  device=handle->device;
   xmpExecutionPolicy_t policy=handle->policy;
-
   //verify out, base, exp, mod devices all match handle device
   if(out->device!=device || a->device!=device || exp->device!=device || mod->device!=device)
     return xmpErrorInvalidDevice;
