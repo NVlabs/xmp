@@ -43,7 +43,7 @@ namespace xmp {
       r.store_digit(digit, index);
     }
     set_ui(digit, 0);
-    while(index<r.length())
+    while(index<r.digits())
       r.store_digit(digit, index++);
   }
 }
