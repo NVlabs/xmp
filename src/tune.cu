@@ -29,6 +29,8 @@ IN THE SOFTWARE.
 
 using namespace std;
 
+//#define CHECK
+
 #define xmpCheckError(fun) \
 {                             \
   xmpError_t error=fun;     \
@@ -78,17 +80,15 @@ void compute_and_add_latencies(xmpHandle_t handle, int alg, vector<Latency>& lat
   else 
     ITERS=5;
 
-//  if(precision>2048)
-//    return;
-
   for(int i=0;i<count*nlimbs;i++)
     zero[i]=0;
 
-  printf("P=%d, alg=%d, count=%d, computing gold\n", precision, alg, count);
+#ifdef CHECK
   //compute gold standard
   xmpCheckError(xmpIntegersPowm(handle,out,a,exp,mod,count));
   xmpCheckError(xmpIntegersExport(handle,gold,&nlimbs,-1,sizeof(uint32_t),-1,0,out,count));
-  
+#endif
+
   cudaEvent_t start,stop;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
@@ -97,22 +97,17 @@ void compute_and_add_latencies(xmpHandle_t handle, int alg, vector<Latency>& lat
   uint32_t max_blocks_sm, instances_per_block;
   algorithm.pfunc(handle,out,a,exp,mod,0,count,&instances_per_block,&max_blocks_sm);
 
-  //printf("alg: %d, max_blocks_sm: %d, instances_per_block: %d\n", alg, max_blocks_sm, instances_per_block);
-
   for(int blocks_sm=1;blocks_sm<=max_blocks_sm*WAVES;blocks_sm++) {
     //compute instances
     uint32_t count = smCount*blocks_sm*instances_per_block;
-    //printf("count: %d, smCount: %d, blocks_sm: %d, instances_per_block: %d\n", count, smCount, blocks_sm, instances_per_block);
 
     xmpCheckError(xmpIntegersImport(handle,out,nlimbs,-1,sizeof(xmpLimb_t),-1,0,zero,count));
 
-    printf("algorithm: %d, count: %d\n", alg, count);
     //warm up
     xmpCheckError(algorithm.pfunc(handle,out,a,exp,mod,0,count,NULL,NULL));
-
     //read back gold standard
     xmpCheckError(xmpIntegersExport(handle,test,&nlimbs,-1,sizeof(uint32_t),-1,0,out,count)); //may change format type
-
+  
     cudaEventRecord(start);
     for(int i=0;i<ITERS;i++) {
       xmpCheckError(algorithm.pfunc(handle,out,a,exp,mod,0,count,NULL,NULL));
@@ -121,6 +116,7 @@ void compute_and_add_latencies(xmpHandle_t handle, int alg, vector<Latency>& lat
     cudaEventSynchronize(stop);
     cudaCheckError();
 
+#ifdef CHECK
     //validate results
     for(int i=0;i<count*nlimbs;i++) {
       if(gold[i]!=test[i]) {
@@ -128,13 +124,16 @@ void compute_and_add_latencies(xmpHandle_t handle, int alg, vector<Latency>& lat
         goto next;
       }
     }
+    //validate results
+#endif
 
     float time_ms, time_s;
     cudaEventElapsedTime(&time_ms,start,stop);
     time_s = time_ms / 1e3;
     latencies.push_back(Latency(alg,time_s/ITERS,count/smCount));
-
+#ifdef CHECK
 next:
+#endif
     cudaCheckError();
   }
 
@@ -183,6 +182,7 @@ int main() {
     xmpIntegers_t a, exp, mod, out;
     uint32_t nlimbs = P/(sizeof(uint32_t)*8);
 
+    if(P!=8192) continue;
     uint32_t *limbs = (uint32_t*)malloc(nlimbs*sizeof(uint32_t)*max_instances);
     assert(limbs!=0);
 
