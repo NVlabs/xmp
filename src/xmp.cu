@@ -710,7 +710,7 @@ xmpError_t XMPAPI xmpIntegersSetAsync(xmpHandle_t handle, xmpIntegers_t out, xmp
   
   xmpExecutionPolicy_t policy=handle->policy;
 
-  if(policy->indices[0]==NULL && policy->indices[1]==NULL) {
+  if(policy->indices[0]==NULL && policy->indices[1]==NULL && in->count == out->count) {
     xmpFormat_t format=in->getFormat();
 
     switch(format) {
