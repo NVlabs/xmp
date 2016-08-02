@@ -101,6 +101,11 @@ void compute_and_add_latencies(xmpHandle_t handle, int alg, vector<Latency>& lat
     //compute instances
     uint32_t count = smCount*blocks_sm*instances_per_block;
 
+    //Temporary work around for indexing bug
+    if(count> 0x7FFFFF*8/precision) {
+      continue;
+    }
+
     xmpCheckError(xmpIntegersImport(handle,out,nlimbs,-1,sizeof(xmpLimb_t),-1,0,zero,count));
 
     //warm up
@@ -172,8 +177,9 @@ int main() {
 
   FILE *file = fopen(filename,"w");
 
-  //max instances in a single wave at 100% occupancy
-  uint32_t max_instances = smCount * 2048 * WAVES;  
+  float max_occupancy=1;
+  //max instances in a single wave at x% occupancy
+  uint32_t max_instances = smCount * 2048 * WAVES * max_occupancy;  
   vector<uint32_t> counts(xmpPowmPrecisionsCount);
 
   for(int p=0;p<xmpPowmPrecisionsCount;p++) {
@@ -182,7 +188,6 @@ int main() {
     xmpIntegers_t a, exp, mod, out;
     uint32_t nlimbs = P/(sizeof(uint32_t)*8);
 
-    if(P!=8192) continue;
     uint32_t *limbs = (uint32_t*)malloc(nlimbs*sizeof(uint32_t)*max_instances);
     assert(limbs!=0);
 

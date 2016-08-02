@@ -57,8 +57,8 @@ extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,6>(xmpHandle_t
 extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
 extern template xmpError_t internalPowmDigitMP<128,4,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t*);
 
-//uint32_t xmpPowmPrecisions[]={128,256,512,768,1024,1536,2048,3072,4096,6144,8192};
-uint32_t xmpPowmPrecisions[]={128,256,512,768,1024,1536,2048,3072,4096};
+uint32_t xmpPowmPrecisions[]={128,256,512,768,1024,1536,2048,3072,4096,6144,8192};
+//uint32_t xmpPowmPrecisions[]={128,256,512,768,1024,1536,2048,3072,4096};
 uint32_t xmpPowmPrecisionsCount = sizeof(xmpPowmPrecisions)/sizeof(uint32_t);
 
 xmpPowmAlgorithm xmpPowmAlgorithms[] = {
@@ -135,6 +135,10 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
     params.alg_index=xmpPowmAlgorithmsCount-1;
     //run at full count (assumes count isn't so big that it overflows CUDA)
     params.count=count;
+  
+    //Temporary work around for indexing bug
+    params.count = MIN(params.count,0x7FFFFF*8/precision);
+
     return params;
   }
 
@@ -173,6 +177,10 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
   //This is likely due to launch latency.
   uint32_t waves = count/params.count;  //number of waves that could fit in the full size
   params.count = waves*params.count;    //scale count by that many waves
+    
+  //Temporary work around for indexing bug
+  params.count = MIN(params.count,0x7FFFFF*8/precision);
+
   //printf("POWM: precison: %d, count: %d, lcount: %d,  alg: %d\n", precision, count, params.count, params.alg_index);
   return params;
 }
