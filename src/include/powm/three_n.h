@@ -28,8 +28,14 @@ namespace xmp {
     public:
       uint32_t _np0;
       uint32_t _registers[_words*4];
+      int32_t  _window_size;
+      int32_t  _exp_offset;
+      int32_t  _exp_length;
 
       __device__ __forceinline__ ThreeN_n(int32_t words, int32_t width, int32_t bits, int32_t window_bits) {
+        _window_size=1<<window_bits;
+//        _exp_offset=(_window_size*_words + _words)*32;
+        _exp_length=(bits+31)>>5;
       }
 
       __device__ __forceinline__ void initialize(uint32_t *window_data, int32_t mod_count) {
@@ -86,7 +92,7 @@ namespace xmp {
 
         #pragma unroll
         for(int word=0;word<_words;word++)
-          A[word]=window_data[index*_words*32 + word*32 + 4*_words*32];
+          A[word]=window_data[index*_words*32 + word*32 + _words*32];
       }
 
       __device__ __forceinline__ void storeWindow(uint32_t *window_data, int index) {
@@ -94,24 +100,24 @@ namespace xmp {
 
         #pragma unroll
         for(int word=0;word<_words;word++)
-          window_data[index*_words*32 + word*32 + 4*_words*32]=A[word];
+          window_data[index*_words*32 + word*32 + _words*32]=A[word];
       }
 
-      __device__ __forceinline__ uint32_t getBits(uint32_t *exp_data, int32_t exp_len, int32_t exp_stride, int32_t bitOffset, int32_t bitLength) {
+      __device__ __forceinline__ uint32_t getBits(uint32_t *window_data, int32_t bitOffset, int32_t bitLength) {
         int32_t  wordOffset;
         uint32_t result;
 
         wordOffset=bitOffset>>5;
         bitOffset=bitOffset & 0x1F;
 
-        if(wordOffset<exp_len)
-          result=exp_data[wordOffset*exp_stride]>>bitOffset;
+        if(wordOffset<_exp_length)
+          result=window_data[(_window_size*_words + _words + wordOffset)*32]>>bitOffset;
         else
           return 0;
 
         if(32-bitOffset<bitLength)
-          if(wordOffset+1<exp_len)
-            result=result | (exp_data[wordOffset*exp_stride+exp_stride]<<32-bitOffset);
+          if(wordOffset+1<_exp_length)
+            result=result | (window_data[(_window_size*_words + _words + wordOffset + 1)*32]<<32-bitOffset);
 
         return result & ((1<<bitLength)-1);
       }
@@ -146,12 +152,12 @@ namespace xmp {
 #ifdef XMAD
         #pragma unroll
         for(int word=0;word<_words;word++)
-          T[word]=window_data[index*_words*32 + word*32 + 4*_words*32];
+          T[word]=window_data[index*_words*32 + word*32 + _words*32];
         mul(RR, A, T);
 #else
         #pragma unroll
         for(int word=0;word<_words;word++)
-          C[word]=window_data[index*_words*32 + word*32 + 4*_words*32];
+          C[word]=window_data[index*_words*32 + word*32 + _words*32];
         kar_mul<_km>(RR, A, C, T);
 #endif
       }

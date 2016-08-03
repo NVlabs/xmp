@@ -36,10 +36,8 @@ IN THE SOFTWARE.
 #define RMP_STATE_START             0x000D0000
 
 namespace xmp {
-  template <class Model>
-  __device__ __forceinline__ void fwe(uint32_t *out_data, int32_t out_len, int32_t out_stride,
-                                      uint32_t *exp_data, int32_t exp_stride,
-                                      int32_t   mod_count,
+  template <class Model, bool storeResults>
+  __device__ __forceinline__ void fwe(int32_t   mod_count,
                                       uint32_t *window,
                                       int32_t   size, int32_t width, int32_t bits, int32_t window_bits) {
     Model    model(size, width, bits, window_bits);
@@ -71,7 +69,7 @@ namespace xmp {
           state=RMP_STATE_REDUCE + RMP_STATE_EXIT;
         else if(state<0x10000) {
           state=state - window_bits;
-          index=model.getBits(exp_data, DIV_ROUND_UP(bits, 32), exp_stride, state, window_bits);
+          index=model.getBits(window, state, window_bits);
           state=state + (-window_bits<<24) + RMP_STATE_WINDOW_MULTIPLY;
         }
       }
@@ -95,8 +93,8 @@ namespace xmp {
           else {
             int offset=(bits%window_bits==0) ? window_bits : bits%window_bits;
 
-            model.loadWindow(window, model.getBits(exp_data, DIV_ROUND_UP(bits, 32), exp_stride, bits-offset, offset));
-            index=model.getBits(exp_data, DIV_ROUND_UP(bits, 32), exp_stride, bits-offset-window_bits, window_bits);
+            model.loadWindow(window, model.getBits(window, bits-offset, offset));
+            index=model.getBits(window, bits-offset-window_bits, window_bits);
             state=(-window_bits<<24) + RMP_STATE_WINDOW_MULTIPLY + bits - offset - window_bits;
           }
         }
@@ -124,9 +122,8 @@ namespace xmp {
       model.reduceCurrent(window, mod_count);
     }
 
-    model.storeResult(window, out_data, out_len, out_stride);
+    if(storeResults)
+      model.storeWindow(window, 0);
   }
-
-
 }
 

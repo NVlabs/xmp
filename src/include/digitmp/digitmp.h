@@ -65,6 +65,8 @@ namespace xmp {
     xmpDigitStorage_warp_distributed_v1,
     xmpDigitStorage_warp_distributed_v2,
     xmpDigitStorage_warp_distributed_v4,
+
+    xmpDigitStorage_warp_distributed_transpose_v1,
   } xmpDigitStorage_t;
 
   template<uint32_t denominator>
@@ -133,7 +135,37 @@ namespace xmp {
         _words=0;
       }
 
-      // used for constructing internal values, i.e., no bound checking required
+      // used for constructing internal values, i.e., no bounds checking required
+      __device__ __forceinline__ DigitMP(bool compact, bool useTextureCache, uint32_t *base) {
+        if(compact) {
+          if(useTextureCache)
+            if(_size%4!=0)
+              _storage=xmpDigitStorage_compact_internal_tex_v1;
+            else
+              _storage=xmpDigitStorage_compact_internal_tex_v4;
+          else
+            if(_size%4!=0)
+              _storage=xmpDigitStorage_compact_internal_v1;
+            else
+              _storage=xmpDigitStorage_compact_internal_v4;
+        }
+        else {
+          if(_size%4!=0)
+            _storage=xmpDigitStorage_warp_strided_internal_v1;
+          else
+            _storage=xmpDigitStorage_warp_strided_internal_v4;
+        }
+
+        _base=base;
+        _start=0;
+        _digits=0x7FFFFFFF;
+        _length=0;
+        _stride=32;
+        _width=0;
+        _words=0;
+      }
+
+      // used for constructing internal values, i.e., no bounds checking required
       __device__ __forceinline__ DigitMP(bool compact, bool useTextureCache, uint32_t *base, int32_t digits, int32_t thread=-1) {
         if(thread<0)
           thread=blockIdx.x*blockDim.x+threadIdx.x;
@@ -174,16 +206,19 @@ namespace xmp {
       }
 
       // used to construct a warp_distributed internal value with no bounds checking
-      __device__ __forceinline__ DigitMP(uint32_t *base, int32_t width, int32_t words, int32_t index, int32_t count, int32_t thread=-1) {
+      __device__ __forceinline__ DigitMP(uint32_t *base, int32_t width, int32_t words, int32_t index, int32_t count, int32_t size, bool transpose=false, int32_t thread=-1) {
         int32_t digits=divide<_size>(width*words);    // remainder must be zero
 
         if(thread<0)
           thread=blockIdx.x*blockDim.x+threadIdx.x;
 
-        _base=base + (thread*width & ~0x1F)*count*words + (thread*width & 0x1F);
-        _storage=xmpDigitStorage_warp_distributed_v1;
+        _base=base + (thread*width & ~0x1F)*size*words + (thread*width & 0x1F);
+        if(transpose)
+          _storage=xmpDigitStorage_warp_distributed_transpose_v1;
+        else
+          _storage=xmpDigitStorage_warp_distributed_v1;
         _start=index*digits;
-        _digits=digits;
+        _digits=count*digits;
         _length=0;
         _stride=32;
         _width=width;
@@ -391,6 +426,9 @@ namespace xmp {
         if(_storage==xmpDigitStorage_warp_distributed_v4) {
           RMP_ERROR("load_digit() - can't load warp_distributed");
         }
+        if(_storage==xmpDigitStorage_warp_distributed_transpose_v1) {
+          RMP_ERROR("load_digit() - can't load warp_distributed");
+        }
       }
 
       __device__ __forceinline__ void store_digit(RegMP x, int32_t digit) {
@@ -506,7 +544,7 @@ namespace xmp {
           uint32_t *base=_base + _start*_size*(32/_width);
           int32_t   offset=digit*_size;
 
-          #pragma unroll
+          #pragma nounroll
           for(int32_t word=0;word<_size;word++)
             base[(word+offset)/_words + (word+offset)%_words*32]=x[word];
         }
@@ -515,6 +553,14 @@ namespace xmp {
         }
         if(_storage==xmpDigitStorage_warp_distributed_v4) {
           RMP_ERROR("load_digit() - store v4 not supported yet");
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_transpose_v1) {
+          uint32_t *base=_base + _start*_size*(32/_width);
+          int32_t   offset=digit*_size;
+
+          #pragma nounroll
+          for(int32_t word=0;word<_size;word++)
+            base[(word+offset)/_width*32 + (word+offset)%_width]=x[word];
         }
 
       }
@@ -640,8 +686,126 @@ namespace xmp {
         if(_storage==xmpDigitStorage_warp_distributed_v4) {
           RMP_ERROR("load_digit_word() - can't load warp_distributed");
         }
+        if(_storage==xmpDigitStorage_warp_distributed_transpose_v1) {
+          RMP_ERROR("load_digit_word() - can't load warp_distributed");
+        }
 
         return 0;
+      }
+
+      __device__ __forceinline__ uint32_t get_bits(int32_t bitOffset, int32_t bitLength) {
+        uint32_t low, high;
+
+        // external storage modes
+        if(_storage==xmpDigitStorage_compact_v1) {
+          RMP_ERROR("get_bits() - compact_v1 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_compact_tex_v1) {
+          RMP_ERROR("get_bits() - compact_tex_v1 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_strided_v1) {
+          RMP_ERROR("get_bits() - strided_v1 not supported");
+          return 0xFFFFFFFF;
+        }
+
+        // internal storge modes
+        if(_storage==xmpDigitStorage_compact_internal_v1) {
+          RMP_ERROR("get_bits() - compact_internal_v1 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_compact_internal_v4) {
+          RMP_ERROR("get_bits() - compact_internal_v4 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_compact_internal_tex_v1) {
+          RMP_ERROR("get_bits() - compact_internal_tex_v1 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_compact_internal_tex_v4) {
+          RMP_ERROR("get_bits() - compact_internal_tex_v4 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_warp_strided_internal_v1) {
+          uint32_t *base=_base + ((bitOffset>>5) + _start*_size)*32;
+
+          bitOffset=bitOffset & 0x1F;
+          if(32-bitOffset>=bitLength) {
+            low=base[0];
+            high=0;
+          }
+          else {
+            low=base[0];
+            high=base[32];
+          }
+        }
+        if(_storage==xmpDigitStorage_warp_strided_internal_v4) {
+          uint4 *base=(uint4 *)(_base + ((bitOffset>>7)*4 + _start*_size)*32);
+
+          bitOffset=bitOffset & 0x7F;
+          if(128-bitOffset>=bitLength) {
+            uint4 data4=base[0];
+
+            if((bitOffset & 0x60)==0x00) {
+              low=data4.x;
+              high=data4.y;
+            }
+            if((bitOffset & 0x60)==0x20) {
+              low=data4.y;
+              high=data4.z;
+            }
+            if((bitOffset & 0x60)==0x40) {
+              low=data4.z;
+              high=data4.w;
+            }
+            if((bitOffset & 0x60)==0x60) {
+              low=data4.w;
+              high=0;
+            }
+          }
+          else {
+            low=base[0].w;
+            high=base[32].x;
+          }
+          bitOffset=bitOffset & 0x1F;
+        }
+
+        // shared memory implementations
+        if(_storage==xmpDigitStorage_shared_internal_v1) {
+          RMP_ERROR("get_bits() - shared_internal_v2 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_shared_internal_v2) {
+          RMP_ERROR("get_bits() - shared_internal_v2 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_shared_chunked_internal_v2) {
+          RMP_ERROR("get_bits() - shared_chunked_internal_v2 not supported");
+          return 0xFFFFFFFF;
+        }
+
+        // warp distributed
+        if(_storage==xmpDigitStorage_warp_distributed_v1) {
+          RMP_ERROR("get_bits() - warp_distributed_v1 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_v2) {
+          RMP_ERROR("get_bits() - warp_distributed_v2 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_v4) {
+          RMP_ERROR("get_bits() - warp_distributed_v4 not supported");
+          return 0xFFFFFFFF;
+        }
+        if(_storage==xmpDigitStorage_warp_distributed_transpose_v1) {
+          RMP_ERROR("get_bits() - warp_distributed_transpose_v1 not supported");
+          return 0xFFFFFFFF;
+        }
+
+        low=low>>bitOffset;
+        high=high<<32-bitOffset;
+        return (low | high) & (1<<bitLength)-1;
       }
   };
 }

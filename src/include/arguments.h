@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ***/
+
 #pragma once
 
 // place pointers first to avoid any alignment issues
@@ -100,23 +101,30 @@ struct divmod_arguments {
 };
 
 struct ar_arguments {
-  uint32_t   precision;     // rounded precision
   xmpLimb_t *scratch_data;  // scratch data used for warpmp_large_ar_kernel
   xmpLimb_t *window_data;
   xmpLimb_t *a_data;
+  xmpLimb_t *exp_data;
   xmpLimb_t *mod_data;
   uint32_t  *a_indices;
+  uint32_t  *exp_indices;
   uint32_t  *mod_indices;
   uint32_t   a_indices_count;
+  uint32_t   exp_indices_count;
   uint32_t   mod_indices_count;
   int32_t    window_bits;
+  int32_t    window_size;
   int32_t    a_len;
   int32_t    a_stride;
   int32_t    a_count;
+  int32_t    exp_len;
+  int32_t    exp_stride;
+  int32_t    exp_count;
   int32_t    mod_len;
   int32_t    mod_stride;
   int32_t    mod_count;
-  int32_t    width;      // number of threads per group, used in warp distributed
+  int32_t    width;         // number of threads per group, used in warp distributed
+  uint32_t   precision;     // rounded precision
 };
 
 struct powm_arguments {
@@ -135,6 +143,19 @@ struct powm_arguments {
   int32_t    width;       // number of threads per group used in warp distributed
   int32_t    bits;
   int32_t    window_bits;
+  int32_t    window_size;
+};
+
+struct copy_out_arguments {
+  xmpLimb_t *out_data;
+  int32_t    out_len;
+  int32_t    out_stride;
+  uint32_t  *out_indices;
+  xmpLimb_t *window_data;
+  int32_t    window_bits;
+  int32_t    window_size;
+  int32_t    digits;
+  int32_t    width;
 };
 
 struct cmp_arguments {
@@ -189,6 +210,7 @@ typedef struct division_arguments mod_arguments_t;
 typedef struct divmod_arguments divmod_arguments_t;
 typedef struct ar_arguments ar_arguments_t;
 typedef struct powm_arguments powm_arguments_t;
+typedef struct copy_out_arguments copy_out_arguments_t;
 typedef struct cmp_arguments cmp_arguments_t;
 typedef struct two_arguments ior_arguments_t;
 typedef struct two_arguments and_arguments_t;

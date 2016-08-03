@@ -25,6 +25,7 @@ namespace xmp {
   class Warp_Distributed {
     public:
       int32_t  _width;
+      int32_t  _logWidth;
       uint32_t _windowBits;
       uint32_t _np0;
       uint32_t _registers[_words*4];
@@ -32,6 +33,7 @@ namespace xmp {
 
       __device__ __forceinline__ Warp_Distributed(int32_t words, int width, int32_t bits, int32_t window_bits) : _context(width) {
         _width=width;
+        _logWidth=__popc(width-1);
         _windowBits=window_bits;
       }
 
@@ -141,21 +143,20 @@ namespace xmp {
         }
       }
 
-      __device__ __forceinline__ uint32_t getBits(uint32_t *exp_data, int32_t exp_len, int32_t exp_stride, int32_t bitOffset, int32_t bitLength) {
+      __device__ __forceinline__ uint32_t getBits(uint32_t *window_data, int32_t bitOffset, int32_t bitLength) {
         int32_t  wordOffset;
         uint32_t result;
 
         wordOffset=bitOffset>>5;
         bitOffset=bitOffset & 0x1F;
 
-        if(wordOffset<exp_len)
-          result=exp_data[wordOffset*exp_stride]>>bitOffset;
-        else
-          return 0;
+        window_data=window_data + (1<<_windowBits)*_words*32 + _words*32 - (threadIdx.x & _width-1);
 
-        if(32-bitOffset<bitLength)
-          if(wordOffset+1<exp_len)
-            result=result | (exp_data[wordOffset*exp_stride+exp_stride]<<32-bitOffset);
+        result=window_data[(wordOffset & _width-1) + (wordOffset>>_logWidth)*32]>>bitOffset;
+        if(32-bitOffset<bitLength) {
+          wordOffset++;
+          result=result | (window_data[(wordOffset & _width-1) + (wordOffset>>_logWidth)*32]<<32-bitOffset);
+        }
 
         return result & ((1<<bitLength)-1);
       }
