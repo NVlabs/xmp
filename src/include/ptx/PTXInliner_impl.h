@@ -339,6 +339,13 @@ namespace xmp {
       PTX_ERROR("PTXInliner: MADHI - unsupported predicate");
   }
 
+  __device__ __forceinline__ void PTXInliner::MADWIDE(uint64_t& r, uint32_t& a, uint32_t& b, uint64_t& c) {
+    if(_predicate==0)
+      asm volatile ("mad.wide.u32 %0, %1, %2, %3;" : "=l"(r) : "r"(a), "r"(b), "l"(c));
+    else
+      PTX_ERROR("PTXInliner: MADWIDE - unsupported predicate");
+  }
+
   __device__ __forceinline__ void PTXInliner::MADHI_CC(uint32_t& r, uint32_t a, uint32_t& b, uint32_t& c) {
     if(_predicate==0)
       asm volatile ("mad.hi.cc.u32 %0, %1, %2, %3;" : "=r"(r) : "r"(a), "r"(b), "r"(c));

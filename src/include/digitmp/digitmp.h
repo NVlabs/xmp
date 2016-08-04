@@ -107,10 +107,10 @@ namespace xmp {
       }
 
       // used for constructing external, i.e., bounds checking is required
-      __device__ __forceinline__ DigitMP(bool compact, bool useTextureCache, uint32_t *base, int32_t length, int32_t stride, int32_t count, int32_t thread=-1) {
+      __device__ __forceinline__ DigitMP(bool compact, bool useTextureCache, uint32_t *base, int32_t length, int32_t stride, int32_t count, uint32_t thread=0xFFFFFFFF) {
         int32_t digits=divide<_size>(length+_size-1);
 
-        if(thread<0)
+        if(thread==0xFFFFFFFF)
           thread=blockIdx.x*blockDim.x+threadIdx.x;
 
         if(compact) {
@@ -166,8 +166,12 @@ namespace xmp {
       }
 
       // used for constructing internal values, i.e., no bounds checking required
-      __device__ __forceinline__ DigitMP(bool compact, bool useTextureCache, uint32_t *base, int32_t digits, int32_t thread=-1) {
-        if(thread<0)
+      __device__ __forceinline__ DigitMP(bool compact, bool useTextureCache, uint32_t *base, int32_t digits, uint32_t thread=0xFFFFFFFF) {
+        PTXInliner inliner;
+        uint32_t   words;
+        uint64_t   offset;
+
+        if(thread==0xFFFFFFFF)
           thread=blockIdx.x*blockDim.x+threadIdx.x;
 
         if(compact) {
@@ -184,16 +188,34 @@ namespace xmp {
               _storage=xmpDigitStorage_compact_internal_v4;
           }
 
-          _base=base + thread*digits*_size;
+          // FIX FIX FIX - this looks broken, shouldn't it be offset by thread?
+
+          offset=0;
+          words=digits*_size;
+          inliner.MADWIDE(offset, thread, words, offset);
+
+          _base=base + offset;
         }
         else {
           if(_size%4!=0) {
             _storage=xmpDigitStorage_warp_strided_internal_v1;
-            _base=base + (thread & ~0x1F)*digits*_size + (thread & 0x1F);
+
+            offset=thread & 0x1F;
+            thread=thread & ~0x1F;
+            words=digits*_size;
+            inliner.MADWIDE(offset, thread, words, offset);
+
+            _base=base + offset;
           }
           else {
             _storage=xmpDigitStorage_warp_strided_internal_v4;
-            _base=base + (thread & ~0x1F)*digits*_size + (thread & 0x1F)*4;
+
+            offset=(thread & 0x1F)*4;
+            thread=thread & ~0x1F;
+            words=digits*_size;
+            inliner.MADWIDE(offset, thread, words, offset);
+
+            _base=base + offset;
           }
         }
 
@@ -206,13 +228,22 @@ namespace xmp {
       }
 
       // used to construct a warp_distributed internal value with no bounds checking
-      __device__ __forceinline__ DigitMP(uint32_t *base, int32_t width, int32_t words, int32_t index, int32_t count, int32_t size, bool transpose=false, int32_t thread=-1) {
-        int32_t digits=divide<_size>(width*words);    // remainder must be zero
+      __device__ __forceinline__ DigitMP(uint32_t *base, int32_t width, int32_t words, int32_t index, int32_t count, int32_t size, bool transpose=false, uint32_t thread=0xFFFFFFFF) {
+        PTXInliner inliner;
+        int32_t    digits=divide<_size>(width*words);    // remainder must be zero
+        uint32_t   window;
+        uint64_t   offset;
 
-        if(thread<0)
+        if(thread==0xFFFFFFFF)
           thread=blockIdx.x*blockDim.x+threadIdx.x;
 
-        _base=base + (thread*width & ~0x1F)*size*words + (thread*width & 0x1F);
+        thread=thread*width;
+        offset=thread & 0x1F;
+        thread=thread & ~0x1F;
+        window=size*words;
+        inliner.MADWIDE(offset, thread, window, offset);
+
+        _base=base + offset;
         if(transpose)
           _storage=xmpDigitStorage_warp_distributed_transpose_v1;
         else

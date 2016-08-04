@@ -2,10 +2,10 @@
 
 template<int32_t _size>
 __global__ void regmp_ar_kernel(ar_arguments_t ar_arguments, int32_t start, int32_t count) {
-  int32_t    thread;
+  uint32_t   thread;
   xmpLimb_t *window_data=ar_arguments.window_data;
   int32_t    window_bits=ar_arguments.window_bits;
-  int32_t    window_size=ar_arguments.window_size;
+  uint32_t   window_size=ar_arguments.window_size;
   xmpLimb_t *a_data=ar_arguments.a_data;
   int32_t    a_len=ar_arguments.a_len;
   int32_t    a_stride=ar_arguments.a_stride;
@@ -29,6 +29,7 @@ __global__ void regmp_ar_kernel(ar_arguments_t ar_arguments, int32_t start, int3
   xmpLimb_t  registers[3*_size+2];
   RegMP      MOD(registers, 0, 0, _size), AR(registers, 0, _size, 2*_size+2);
   xmpLimb_t *source, *window;
+  uint64_t   window_offset;
 
   // FIX FIX FIX - check for odd
 
@@ -39,7 +40,10 @@ __global__ void regmp_ar_kernel(ar_arguments_t ar_arguments, int32_t start, int3
     if(NULL!=exp_indices) expindex=exp_indices[expindex%exp_indices_count];
     if(NULL!=mod_indices) modindex=mod_indices[modindex%mod_indices_count];
 
-    window=window_data + (thread & ~0x1F)*window_size + (thread & 0x1F);
+    window_offset=thread & 0x1F;
+    thread=thread & ~0x1F;
+    inliner.MADWIDE(window_offset, thread, window_size, window_offset);
+    window=window_data + window_offset;
 
     source=a_data + aindex%a_count;
     #pragma unroll
@@ -85,14 +89,16 @@ __global__ void regmp_ar_kernel(ar_arguments_t ar_arguments, int32_t start, int3
 template<int32_t lb_threads, int32_t lb_blocks, bool use_sm_cache, int32_t _words, int32_t _ks, int32_t _km>
 __launch_bounds__(lb_threads, lb_blocks)
 __global__ void regmp_powm_kernel(powm_arguments_t powm_arguments, int32_t start, int32_t count) {
-  int32_t    thread;
-  int32_t    mod_count=powm_arguments.mod_count;
-  xmpLimb_t *window_data=powm_arguments.window_data;
-  int32_t    bits=powm_arguments.bits;
-  int32_t    window_bits=powm_arguments.window_bits;
-  int32_t    window_size=powm_arguments.window_size;
+  uint32_t    thread;
+  int32_t     mod_count=powm_arguments.mod_count;
+  xmpLimb_t  *window_data=powm_arguments.window_data;
+  int32_t     bits=powm_arguments.bits;
+  int32_t     window_bits=powm_arguments.window_bits;
+  uint32_t    window_size=powm_arguments.window_size;
 
-  xmpLimb_t *w;
+  PTXInliner  inliner;
+  xmpLimb_t  *w;
+  uint64_t    window_offset;
 
   // use_sm_cache is not currently supported
 
@@ -100,7 +106,10 @@ __global__ void regmp_powm_kernel(powm_arguments_t powm_arguments, int32_t start
 
   thread=blockIdx.x*blockDim.x + threadIdx.x;
   if(thread<count) {
-    w=window_data + (thread & ~0x1F)*window_size + (thread & 0x1F);
+    window_offset=thread & 0x1F;
+    thread=thread & ~0x1F;
+    inliner.MADWIDE(window_offset, thread, window_size, window_offset);
+    w=window_data + window_offset;
 
     typedef ThreeN_n<_words, _ks, _km> ThreeNModel;
 
@@ -112,23 +121,29 @@ __global__ void regmp_powm_kernel(powm_arguments_t powm_arguments, int32_t start
 
 template<int _words>
 __global__ void regmp_copy_out_kernel(copy_out_arguments_t copy_out_arguments, int32_t start, int32_t count) {
-  int32_t    thread;
-  xmpLimb_t *out_data=copy_out_arguments.out_data;
-  int32_t    out_len=copy_out_arguments.out_len;
-  int32_t    out_stride=copy_out_arguments.out_stride;
-  uint32_t  *out_indices=copy_out_arguments.out_indices;
-  xmpLimb_t *window_data=copy_out_arguments.window_data;
-  int32_t    window_size=copy_out_arguments.window_size;
+  uint32_t    thread;
+  xmpLimb_t  *out_data=copy_out_arguments.out_data;
+  int32_t     out_len=copy_out_arguments.out_len;
+  int32_t     out_stride=copy_out_arguments.out_stride;
+  uint32_t   *out_indices=copy_out_arguments.out_indices;
+  xmpLimb_t  *window_data=copy_out_arguments.window_data;
+  uint32_t    window_size=copy_out_arguments.window_size;
 
-  xmpLimb_t *o, *w;
+  PTXInliner  inliner;
+  xmpLimb_t  *o, *w;
+  uint64_t    window_offset;
 
   thread=blockIdx.x*blockDim.x + threadIdx.x;
   if(thread<count) {
     int32_t outindex=start + thread;
     if(NULL!=out_indices) outindex=out_indices[outindex];
 
+    window_offset=thread & 0x1F;
+    thread=thread & ~0x1F;
+    inliner.MADWIDE(window_offset, thread, window_size, window_offset);
+
     o=out_data + outindex;
-    w=window_data + (thread & ~0x1F)*window_size + (thread & 0x1F);
+    w=window_data + window_offset;
 
     #pragma nounroll
     for(int index=0;index<out_len;index++)
@@ -138,10 +153,10 @@ __global__ void regmp_copy_out_kernel(copy_out_arguments_t copy_out_arguments, i
 
 template<int size>
 __global__ void digitmp_ar_kernel(ar_arguments_t ar_arguments, int32_t start, int32_t count) {
-  int32_t    thread;
+  uint32_t   thread;
   xmpLimb_t *window_data=ar_arguments.window_data;
   int32_t    window_bits=ar_arguments.window_bits;
-  int32_t    window_size=ar_arguments.window_size;
+  uint32_t   window_size=ar_arguments.window_size;
   xmpLimb_t *a_data=ar_arguments.a_data;
   int32_t    a_len=ar_arguments.a_len;
   int32_t    a_stride=ar_arguments.a_stride;
@@ -210,10 +225,10 @@ __global__ void digitmp_ar_kernel(ar_arguments_t ar_arguments, int32_t start, in
 template<int32_t lb_threads, int32_t lb_blocks, bool use_sm_cache, int size>
 __launch_bounds__(lb_threads, lb_blocks)
 __global__ void digitmp_powm_kernel(powm_arguments_t powm_arguments, int32_t start, int32_t count) {
-  int32_t    thread;
+  uint32_t   thread;
   int32_t    mod_count=powm_arguments.mod_count;
   xmpLimb_t *window_data=powm_arguments.window_data;
-  int32_t    window_size=powm_arguments.window_size;
+  uint32_t   window_size=powm_arguments.window_size;
   int32_t    digits=powm_arguments.digits;
   int32_t    bits=powm_arguments.bits;
   int32_t    window_bits=powm_arguments.window_bits;
@@ -237,13 +252,13 @@ __global__ void digitmp_powm_kernel(powm_arguments_t powm_arguments, int32_t sta
 
 template<int size>
 __global__ void digitmp_copy_out_kernel(copy_out_arguments_t copy_out_arguments, int32_t start, int32_t count) {
-  int32_t    thread;
+  uint32_t   thread;
   xmpLimb_t *out_data=copy_out_arguments.out_data;
   int32_t    out_len=copy_out_arguments.out_len;
   int32_t    out_stride=copy_out_arguments.out_stride;
   uint32_t  *out_indices=copy_out_arguments.out_indices;
   xmpLimb_t *window_data=copy_out_arguments.window_data;
-  int32_t    window_size=copy_out_arguments.window_size;
+  uint32_t   window_size=copy_out_arguments.window_size;
   int32_t    digits=copy_out_arguments.digits;
 
   xmpLimb_t  registers[size];
@@ -274,35 +289,36 @@ __global__ void digitmp_copy_out_kernel(copy_out_arguments_t copy_out_arguments,
 template<int32_t size>
 __global__ void warpmp_small_ar_kernel(ar_arguments_t ar_arguments, int32_t start, int32_t count) {
 #if __CUDA_ARCH__>=300
-  int32_t    thread;
-  xmpLimb_t *window_data=ar_arguments.window_data;
-  int32_t    window_bits=ar_arguments.window_bits;
-  int32_t    window_size=ar_arguments.window_size;
-  xmpLimb_t *a_data=ar_arguments.a_data;
-  int32_t    a_len=ar_arguments.a_len;
-  int32_t    a_stride=ar_arguments.a_stride;
-  int32_t    a_count=ar_arguments.a_count;
-  xmpLimb_t *exp_data=ar_arguments.exp_data;
-  int32_t    exp_len=ar_arguments.exp_len;
-  int32_t    exp_stride=ar_arguments.exp_stride;
-  int32_t    exp_count=ar_arguments.exp_count;
-  xmpLimb_t *mod_data=ar_arguments.mod_data;
-  int32_t    mod_len=ar_arguments.mod_len;
-  int32_t    mod_stride=ar_arguments.mod_stride;
-  int32_t    mod_count=ar_arguments.mod_count;
-  int32_t    width=ar_arguments.width;
-  uint32_t  *a_indices=ar_arguments.a_indices;
-  uint32_t  *exp_indices=ar_arguments.exp_indices;
-  uint32_t  *mod_indices=ar_arguments.mod_indices;
-  uint32_t   a_indices_count=ar_arguments.a_indices_count;
-  uint32_t   exp_indices_count=ar_arguments.exp_indices_count;
-  uint32_t   mod_indices_count=ar_arguments.mod_indices_count;
+  uint32_t    thread;
+  xmpLimb_t  *window_data=ar_arguments.window_data;
+  int32_t     window_bits=ar_arguments.window_bits;
+  uint32_t    window_size=ar_arguments.window_size;
+  xmpLimb_t  *a_data=ar_arguments.a_data;
+  int32_t     a_len=ar_arguments.a_len;
+  int32_t     a_stride=ar_arguments.a_stride;
+  int32_t     a_count=ar_arguments.a_count;
+  xmpLimb_t  *exp_data=ar_arguments.exp_data;
+  int32_t     exp_len=ar_arguments.exp_len;
+  int32_t     exp_stride=ar_arguments.exp_stride;
+  int32_t     exp_count=ar_arguments.exp_count;
+  xmpLimb_t  *mod_data=ar_arguments.mod_data;
+  int32_t     mod_len=ar_arguments.mod_len;
+  int32_t     mod_stride=ar_arguments.mod_stride;
+  int32_t     mod_count=ar_arguments.mod_count;
+  int32_t     width=ar_arguments.width;
+  uint32_t   *a_indices=ar_arguments.a_indices;
+  uint32_t   *exp_indices=ar_arguments.exp_indices;
+  uint32_t   *mod_indices=ar_arguments.mod_indices;
+  uint32_t    a_indices_count=ar_arguments.a_indices_count;
+  uint32_t    exp_indices_count=ar_arguments.exp_indices_count;
+  uint32_t    mod_indices_count=ar_arguments.mod_indices_count;
 
-  PTXInliner inliner;
-  xmpLimb_t  registers[3*size+2];
-  RegMP      MOD(registers, 0, 0, size), AR(registers, 0, size, 2*size+2);
-  xmpLimb_t *source, *window;
-  int32_t    words=size/width;
+  PTXInliner  inliner;
+  xmpLimb_t   registers[3*size+2];
+  RegMP       MOD(registers, 0, 0, size), AR(registers, 0, size, 2*size+2);
+  xmpLimb_t  *source, *window;
+  int32_t     words=size/width;
+  uint64_t    window_offset;
 
   // FIX FIX FIX - check for odd
 
@@ -325,7 +341,13 @@ __global__ void warpmp_small_ar_kernel(ar_arguments_t ar_arguments, int32_t star
     AR[size+size]=0;
     AR[size+size+1]=0;
 
-    window=window_data + (thread*width & ~0x1F)*window_size*words + (thread*width & 0x1F);
+    thread=thread*width;
+    window_offset=thread & 0x1F;
+    thread=thread & ~0x1F;
+    window_size=window_size*words;
+    inliner.MADWIDE(window_offset, thread, window_size, window_offset);
+    window=window_data + window_offset;
+
     source=exp_data + expindex%exp_count;
     #pragma nounroll
     for(int index=0;index<exp_len;index++)
@@ -357,12 +379,12 @@ __global__ void warpmp_small_ar_kernel(ar_arguments_t ar_arguments, int32_t star
 template<int32_t size>
 __global__ void warpmp_large_ar_kernel(ar_arguments_t ar_arguments, int32_t start, int32_t count) {
 #if __CUDA_ARCH__>=300
-  int32_t    thread;
+  uint32_t   thread;
   uint32_t   precision=ar_arguments.precision;
   xmpLimb_t *scratch_data=ar_arguments.scratch_data;
   xmpLimb_t *window_data=ar_arguments.window_data;
   int32_t    window_bits=ar_arguments.window_bits;
-  int32_t    window_size=ar_arguments.window_size;
+  uint32_t   window_size=ar_arguments.window_size;
   xmpLimb_t *a_data=ar_arguments.a_data;
   int32_t    a_len=ar_arguments.a_len;
   int32_t    a_stride=ar_arguments.a_stride;
@@ -386,6 +408,7 @@ __global__ void warpmp_large_ar_kernel(ar_arguments_t ar_arguments, int32_t star
   xmpLimb_t  registers[4*size+4];
   RegMP      ZERO(registers, 0, 0, size);
   int32_t    digits=divide<size>(precision);
+  uint64_t   window_offset;
   int32_t    words=precision/width;
 
   thread=blockIdx.x*blockDim.x + threadIdx.x;
@@ -424,21 +447,27 @@ template<int32_t lb_threads, int32_t lb_blocks, int32_t _words>
 __launch_bounds__(lb_threads, lb_blocks)
 __global__ void warpmp_powm_kernel(powm_arguments_t powm_arguments, int32_t start, int32_t count) {
 #if __CUDA_ARCH__>=300
-  int32_t    thread;
-  int32_t    mod_count=powm_arguments.mod_count;
-  xmpLimb_t *window_data=powm_arguments.window_data;
-  int32_t    width=powm_arguments.width;
-  int32_t    bits=powm_arguments.bits;
-  int32_t    window_bits=powm_arguments.window_bits;
-  int32_t    window_size=powm_arguments.window_size;
+  uint32_t    thread;
+  int32_t     mod_count=powm_arguments.mod_count;
+  xmpLimb_t  *window_data=powm_arguments.window_data;
+  int32_t     width=powm_arguments.width;
+  int32_t     bits=powm_arguments.bits;
+  int32_t     window_bits=powm_arguments.window_bits;
+  uint32_t    window_size=powm_arguments.window_size;
 
-  xmpLimb_t *w;
+  PTXInliner  inliner;
+  xmpLimb_t  *w;
+  uint64_t    window_offset;
 
   // exp_len is passed in the bits parameters, mod_len is passed in _words parameter
 
   thread=blockIdx.x*blockDim.x + threadIdx.x;
   if(thread<count*width) {
-    w=window_data + (thread & ~0x1F)*window_size*_words + (thread & 0x1F);
+    window_offset=thread & 0x1F;
+    thread=thread & ~0x1F;
+    window_size=window_size*_words;
+    inliner.MADWIDE(window_offset, thread, window_size, window_offset);
+    w=window_data + window_offset;
 
     typedef Warp_Distributed<_words> WarpDistributedModel;
 
@@ -452,16 +481,18 @@ __global__ void warpmp_powm_kernel(powm_arguments_t powm_arguments, int32_t star
 template<int words>
 __global__ void warpmp_copy_out_kernel(copy_out_arguments_t copy_out_arguments, int32_t start, int32_t count) {
 #if __CUDA_ARCH__>=300
-  int32_t    thread;
-  xmpLimb_t *out_data=copy_out_arguments.out_data;
-  int32_t    out_len=copy_out_arguments.out_len;
-  int32_t    out_stride=copy_out_arguments.out_stride;
-  uint32_t  *out_indices=copy_out_arguments.out_indices;
-  xmpLimb_t *window_data=copy_out_arguments.window_data;
-  int32_t    window_size=copy_out_arguments.window_size;
-  int32_t    width=copy_out_arguments.width;
+  uint32_t    thread;
+  xmpLimb_t  *out_data=copy_out_arguments.out_data;
+  int32_t     out_len=copy_out_arguments.out_len;
+  int32_t     out_stride=copy_out_arguments.out_stride;
+  uint32_t   *out_indices=copy_out_arguments.out_indices;
+  xmpLimb_t  *window_data=copy_out_arguments.window_data;
+  uint32_t    window_size=copy_out_arguments.window_size;
+  int32_t     width=copy_out_arguments.width;
 
-  xmpLimb_t *o, *w;
+  PTXInliner  inliner;
+  xmpLimb_t  *o, *w;
+  uint64_t    window_offset;
 
   thread=blockIdx.x*blockDim.x + threadIdx.x;
   if(thread<count) {
@@ -469,7 +500,14 @@ __global__ void warpmp_copy_out_kernel(copy_out_arguments_t copy_out_arguments, 
     if(NULL!=out_indices) outindex=out_indices[outindex];
 
     o=out_data + outindex;
-    w=window_data + (thread*width & ~0x1F)*window_size*words + (thread*width & 0x1F);
+
+    thread=thread*width;
+    window_offset=thread & 0x1F;
+    thread=thread & ~0x1F;
+    window_size=window_size*words;
+    inliner.MADWIDE(window_offset, thread, window_size, window_offset);
+    w=window_data + window_offset;
+
     #pragma nounroll
     for(int word=0;word<out_len;word++) {
       o[word*out_stride]=w[word/words + word%words*32];

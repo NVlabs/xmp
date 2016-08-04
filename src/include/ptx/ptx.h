@@ -72,6 +72,8 @@ namespace xmp {
       __device__ void MULLO(uint32_t& r, uint32_t& a, uint32_t& b);
       __device__ void MULHI(uint32_t& r, uint32_t& a, uint32_t& b);
 
+      __device__ void MADWIDE(uint64_t& r, uint32_t& a, uint32_t& b, uint64_t& c);
+
       __device__ void MADLO(uint32_t& r, uint32_t a, uint32_t& b, uint32_t& c);
       __device__ void MADLO_CC(uint32_t& r, uint32_t a, uint32_t& b, uint32_t& c);
       __device__ void MADLOC(uint32_t& r, uint32_t a, uint32_t& b, uint32_t& c);
