@@ -9,35 +9,33 @@ ARCH=  -gencode arch=compute_30,code=\"compute_30,sm_30\" \
 NVCC_FLAGS=--std=c++11 -O3 ${ARCH} -Xcompiler -fPIC -Xcompiler -fvisibility=hidden -lineinfo -Xcompiler -rdynamic  -Xptxas -v
 
 
-.PHONY: libs all samples unit_tests perf_tests clean tests
+.PHONY: libs all samples unit_tests perf_tests clean tests objs
 
 INC=src/include
 INCLUDES=$(wildcard ${INC}/*.h) $(wildcard ${INC}/*/*.h)
 TUNE_INC=$(wildcard src/tune/*.h)
 
+INST_SRCS=$(wildcard src/instantiations/*.cu)
+INST_OBJS=$(INST_SRCS:.cu=.o)
+
+
 libs:  libxmp.a libxmp.so
 
-all: libs samples unit_tests perf_tests tune
+all: objs libs samples unit_tests perf_tests tune
+	
+objs: tune.o xmp.o operators.o ${INST_OBJS}
 
-xmp.o: src/xmp.cu ${INCLUDES}
-	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
 
 operators.o: src/operators.cu ${INCLUDES} ${TUNE_INC}
 	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
 
-instantiations.o: src/instantiations/instantiations.cu ${INCLUDES} 
-	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
-
-tune.o: src/tune/tune.cu 
-	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
-
-tune: tune.o xmp.o operators.o instantiations.o
+tune: tune.o xmp.o operators.o ${INST_OBJS}
 	nvcc ${NVCC_FLAGS} $^ -o $@
 
-libxmp.a: xmp.o operators.o instantiations.o
+libxmp.a: xmp.o operators.o ${INST_OBJS}
 	nvcc ${NVCC_FLAGS} --lib $^ -o $@ 
 
-libxmp.so: xmp.o operators.o instantiations.o
+libxmp.so: xmp.o operators.o ${INST_OBJS}
 	nvcc ${NVCC_FLAGS} --shared $^ -o $@ 
 
 samples: libs
@@ -50,7 +48,7 @@ perf_tests: libs
 	make -C perf_tests
 
 clean:
-	rm -f *.o *.a *.so
+	rm -f *.o *.a *.so src/instantiations/*.o
 
 tests: libxmp.a
 	make -C unit_tests run
@@ -59,3 +57,12 @@ make cleanall:  clean
 	make -C samples clean
 	make -C unit_tests clean
 	make -C perf_tests clean
+
+xmp.o: src/xmp.cu ${INCLUDES}
+	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
+
+tune.o: src/tune/tune.cu
+	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
+
+%.o : %.cu ${INCLUDES}
+	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@

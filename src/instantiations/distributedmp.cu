@@ -1,9 +1,5 @@
 #include <operators.h>
 
-template xmpError_t internalPowmRegMP<128,6,4,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-template xmpError_t internalPowmRegMP<128,6,8,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-template xmpError_t internalPowmRegMP<128,6,12,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-template xmpError_t internalPowmRegMP<128,6,16,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
 template xmpError_t internalPowmWarpDistributedMP<128,6,4,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
 template xmpError_t internalPowmWarpDistributedMP<128,6,2,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
 template xmpError_t internalPowmWarpDistributedMP<128,6,8,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
@@ -32,4 +28,3 @@ template xmpError_t internalPowmWarpDistributedMP<128,6,32,4>(xmpHandle_t,xmpInt
 template xmpError_t internalPowmWarpDistributedMP<128,6,16,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
 template xmpError_t internalPowmWarpDistributedMP<128,6,32,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
 template xmpError_t internalPowmWarpDistributedMP<128,6,32,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-template xmpError_t internalPowmDigitMP<128,6,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
