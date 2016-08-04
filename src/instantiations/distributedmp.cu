@@ -1,4 +1,5 @@
 #include <operators.h>
+#include <powm_operators.h>
 
 template xmpError_t internalPowmWarpDistributedMP<128,6,4,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
 template xmpError_t internalPowmWarpDistributedMP<128,6,2,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );

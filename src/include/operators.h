@@ -28,5 +28,15 @@ IN THE SOFTWARE.
 #define DIGIT 8
 #define GSL true
 
-#include "powm_operators.h"
 
+template<class T>
+inline void configureActiveBlocks(xmpHandle_t handle, dim3 &blocks, dim3 threads, T *kernel) {
+  int         maxBlocks;
+  cudaError_t error;
+
+  if(GSL) {
+    error=cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxBlocks, kernel, threads.x, 0);
+    if(error==cudaSuccess && blocks.x>maxBlocks*handle->smCount)
+      blocks.x=maxBlocks*handle->smCount;
+  }
+}

@@ -18,24 +18,23 @@ TUNE_INC=$(wildcard src/tune/*.h)
 INST_SRCS=$(wildcard src/instantiations/*.cu)
 INST_OBJS=$(INST_SRCS:.cu=.o)
 
+SRC_SRCS=$(wildcard src/*.cu)
+SRC_OBJS=$(SRC_SRCS:.cu=.o)
 
 libs:  libxmp.a libxmp.so
 
 all: objs libs samples unit_tests perf_tests tune
 	
-objs: tune.o xmp.o operators.o ${INST_OBJS}
+objs: tune.o xmp.o operators.o ${INST_OBJS} ${SRC_OBJS}
 
 
-operators.o: src/operators.cu ${INCLUDES} ${TUNE_INC}
-	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
-
-tune: tune.o xmp.o operators.o ${INST_OBJS}
+tune: ${INST_OBJS} ${SRC_OBJS}
 	nvcc ${NVCC_FLAGS} $^ -o $@
 
-libxmp.a: xmp.o operators.o ${INST_OBJS}
+libxmp.a: ${INST_OBJS} ${SRC_OBJS}
 	nvcc ${NVCC_FLAGS} --lib $^ -o $@ 
 
-libxmp.so: xmp.o operators.o ${INST_OBJS}
+libxmp.so: ${INST_OBJS} ${SRC_OBJS}
 	nvcc ${NVCC_FLAGS} --shared $^ -o $@ 
 
 samples: libs
@@ -48,7 +47,7 @@ perf_tests: libs
 	make -C perf_tests
 
 clean:
-	rm -f *.o *.a *.so src/instantiations/*.o
+	rm -f *.o *.a *.so src/*.o src/instantiations/*.o
 
 tests: libxmp.a
 	make -C unit_tests run
@@ -57,9 +56,6 @@ make cleanall:  clean
 	make -C samples clean
 	make -C unit_tests clean
 	make -C perf_tests clean
-
-xmp.o: src/xmp.cu ${INCLUDES}
-	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
 
 tune.o: src/tune/tune.cu
 	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
