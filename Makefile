@@ -13,6 +13,7 @@ NVCC_FLAGS=--std=c++11 -O3 ${ARCH} -Xcompiler -fPIC -Xcompiler -fvisibility=hidd
 
 INC=src/include
 INCLUDES=$(wildcard ${INC}/*.h) $(wildcard ${INC}/*/*.h)
+TUNE_INC=$(wildcard src/tune/*.h)
 
 libs:  libxmp.a libxmp.so
 
@@ -21,13 +22,13 @@ all: libs samples unit_tests perf_tests tune
 xmp.o: src/xmp.cu ${INCLUDES}
 	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
 
-operators.o: src/operators.cu ${INCLUDES}
+operators.o: src/operators.cu ${INCLUDES} ${TUNE_INC}
 	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
 
-instantiations.o: src/instantiations/instantiations.cu ${INCLUDES}
+instantiations.o: src/instantiations/instantiations.cu ${INCLUDES} 
 	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
 
-tune.o: src/tune.cu 
+tune.o: src/tune/tune.cu 
 	nvcc ${NVCC_FLAGS} -I${INC} $< -c -o $@
 
 tune: tune.o xmp.o operators.o instantiations.o

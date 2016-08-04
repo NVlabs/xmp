@@ -2895,6 +2895,8 @@ INSTANTIATE_TEST_CASE_P(DistributedPowmTests, PowmTest, ::testing::Values(
       PowmParams(6144,6144,6144,6144,N,N,1,1,N,xmpAlgorithmDigitMP),
       PowmParams(6144,6144,6144,6144,N,N,N,N,N,xmpAlgorithmDigitMP),
 
+      PowmParams(512,512,512,512,N,N,N,N,N,xmpAlgorithmDigitMP),
+      PowmParams(512,512,512,512,N,N,1,1,N,xmpAlgorithmDigitMP),
       PowmParams(1024,1024,1024,1024,N,N,N,N,N,xmpAlgorithmDigitMP),
       PowmParams(1024,1024,1024,1024,N,N,1,1,N,xmpAlgorithmDigitMP),
       PowmParams(2048,2048,2048,2048,N,N,N,N,N,xmpAlgorithmDigitMP),
@@ -2904,15 +2906,7 @@ INSTANTIATE_TEST_CASE_P(DistributedPowmTests, PowmTest, ::testing::Values(
       PowmParams(8192,8192,8192,8192,N,N,N,N,N,xmpAlgorithmDigitMP),
       PowmParams(8192,8192,8192,8192,N,N,1,1,N,xmpAlgorithmDigitMP),
  
-      PowmParams(160,160,160,160,N,N,N,N,N,xmpAlgorithmDigitMP),
-      PowmParams(192,192,192,192,N,N,N,N,N,xmpAlgorithmDigitMP),
-      PowmParams(224,224,224,224,N,N,N,N,N,xmpAlgorithmDigitMP),
-      PowmParams(288,288,288,288,N,N,N,N,N,xmpAlgorithmDigitMP),
-      PowmParams(320,320,320,320,N,N,N,N,N,xmpAlgorithmDigitMP),
-      PowmParams(352,352,352,352,N,N,N,N,N,xmpAlgorithmDigitMP),
-      PowmParams(384,384,384,384,N,N,N,N,N,xmpAlgorithmDigitMP),
-      PowmParams(544,544,544,544,N,N,N,N,N,xmpAlgorithmDigitMP),
-      PowmParams(8192,8192,8192,8192,49152,49152,49152,49152,18432,xmpAlgorithmDigitMP)
+      PowmParams(544,544,544,544,N,N,N,N,N,xmpAlgorithmDigitMP)
       
 
       ));

@@ -23,84 +23,84 @@ IN THE SOFTWARE.
 #include <operators.h>
 
 //prevent instantiation of these here....
-extern template xmpError_t internalPowmRegMP<128,4,4,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmRegMP<128,4,8,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmRegMP<128,4,12,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmRegMP<128,4,16,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,4,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,2,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,8,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,4,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,2,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,4,3>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,2,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,16,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,8,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,4,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,2,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,8,3>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,4,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,16,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,8,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,4,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,16,3>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,8,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,16,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,8,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,3>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,16,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,16,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmWarpDistributedMP<128,4,32,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
-extern template xmpError_t internalPowmDigitMP<128,4,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t*);
+extern template xmpError_t internalPowmRegMP<128,6,4,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmRegMP<128,6,8,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmRegMP<128,6,12,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmRegMP<128,6,16,0,0>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,4,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,2,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,8,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,4,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,2,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,4,3>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,2,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,16,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,8,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,4,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,2,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,8,3>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,4,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,32,1>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,16,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,8,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,4,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,16,3>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,8,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,32,2>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,16,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,8,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,32,3>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,16,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,32,4>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,16,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,32,6>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmWarpDistributedMP<128,6,32,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t* );
+extern template xmpError_t internalPowmDigitMP<128,6,8>(xmpHandle_t,xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, const xmpIntegers_t, uint32_t, uint32_t, uint32_t*, uint32_t*);
 
 uint32_t xmpPowmPrecisions[]={128,256,512,768,1024,1536,2048,3072,4096,6144,8192};
-//uint32_t xmpPowmPrecisions[]={128,256,512,768,1024,1536,2048,3072,4096};
+//uint32_t xmpPowmPrecisions[]={128,256,512,768,1024,1536,2048,3072,4096,6144};
 uint32_t xmpPowmPrecisionsCount = sizeof(xmpPowmPrecisions)/sizeof(uint32_t);
 
 xmpPowmAlgorithm xmpPowmAlgorithms[] = {
   //ThreeN
-  xmpPowmAlgorithm(xmpAlgorithmRegMP,(xmpPowmFunc)internalPowmRegMP<128,4,4,0,0>,1,128),
-  xmpPowmAlgorithm(xmpAlgorithmRegMP,(xmpPowmFunc)internalPowmRegMP<128,4,8,0,0>,129,256),
-  xmpPowmAlgorithm(xmpAlgorithmRegMP,(xmpPowmFunc)internalPowmRegMP<128,4,12,0,0>,257,384),
-  xmpPowmAlgorithm(xmpAlgorithmRegMP,(xmpPowmFunc)internalPowmRegMP<128,4,16,0,0>,385,512),
+  xmpPowmAlgorithm(xmpAlgorithmRegMP,(xmpPowmFunc)internalPowmRegMP<128,6,4,0,0>,1,128),
+  xmpPowmAlgorithm(xmpAlgorithmRegMP,(xmpPowmFunc)internalPowmRegMP<128,6,8,0,0>,129,256),
+  xmpPowmAlgorithm(xmpAlgorithmRegMP,(xmpPowmFunc)internalPowmRegMP<128,6,12,0,0>,257,384),
+  xmpPowmAlgorithm(xmpAlgorithmRegMP,(xmpPowmFunc)internalPowmRegMP<128,6,16,0,0>,385,512),
 
   //Distributed
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,4,1>,1,128),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,2,2>,1,128),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,8,1>,129,256),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,4,2>,129,256),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,2,4>,129,256),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,4,3>,257,384),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,2,6>,257,384),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,16,1>,385,512),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,8,2>,385,512),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,4,4>,385,512),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,2,8>,385,512),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,8,3>,513,768),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,4,6>,513,768),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,32,1>,767,1024),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,16,2>,767,1024),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,8,4>,767,1024),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,4,8>,767,1024),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,4,1>,1,128),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,2,2>,1,128),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,8,1>,129,256),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,4,2>,129,256),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,2,4>,129,256),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,4,3>,257,384),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,2,6>,257,384),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,16,1>,385,512),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,8,2>,385,512),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,4,4>,385,512),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,2,8>,385,512),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,8,3>,513,768),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,4,6>,513,768),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,32,1>,767,1024),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,16,2>,767,1024),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,8,4>,767,1024),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,4,8>,767,1024),
 #if 1
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,16,3>,1025,1536),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,8,6>,1025,1536),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,32,2>,1537,2048),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,16,4>,1537,2048),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,8,8>,1537,2048),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,32,3>,2049,3072),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,16,6>,2049,3072),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,32,4>,3073,4096),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,16,8>,3073,4096),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,32,6>,4097,6144),
-  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,4,32,8>,6145,8192),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,16,3>,1025,1536),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,8,6>,1025,1536),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,32,2>,1537,2048),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,16,4>,1537,2048),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,8,8>,1537,2048),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,32,3>,2049,3072),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,16,6>,2049,3072),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,32,4>,3073,4096),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,16,8>,3073,4096),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,32,6>,4097,6144),
+  xmpPowmAlgorithm(xmpAlgorithmDistributedMP,(xmpPowmFunc)internalPowmWarpDistributedMP<128,6,32,8>,6145,8192),
 #endif
   //Digitized
-  xmpPowmAlgorithm(xmpAlgorithmDigitMP,(xmpPowmFunc)internalPowmDigitMP<128,4,8>,512,uint32_t(-1)),
+  xmpPowmAlgorithm(xmpAlgorithmDigitMP,(xmpPowmFunc)internalPowmDigitMP<128,6,8>,512,uint32_t(-1)),
 };
 uint32_t xmpPowmAlgorithmsCount = sizeof(xmpPowmAlgorithms)/sizeof(xmpPowmAlgorithm);
 
@@ -108,22 +108,89 @@ struct LaunchParameters
 {
   int32_t alg_index;
   uint32_t count;
-  LaunchParameters(int32_t alg_index, uint32_t count) : alg_index(alg_index), count(count) {}
-  LaunchParameters() : alg_index(-1), count(0) {}
+  float latency;
+  LaunchParameters(int32_t alg_index, uint32_t count, float latency) : alg_index(alg_index), count(count), latency(latency) {}
+  LaunchParameters() : alg_index(-1), count(0), latency(99999999999) {}
 };
 
-#include <tune/tune_maxwell.h>
-#include <tune/tune_kepler.h>
+#include "tune/tune_maxwell.h"
+#include "tune/tune_kepler.h"
 
+LaunchParameters getFastestPowmLaunch(xmpHandle_t handle, xmpAlgorithm_t alg, uint32_t count, const Latency *lookup, uint32_t tbl_count) {
+  LaunchParameters params;
+  float max_throughput=0;
+  params.alg_index=-1;
+
+
+  int i=0;
+  while(i<tbl_count) {
+    
+    Latency lat = lookup[i];
+    uint32_t alg_index=lat.alg_index;
+    if(alg!=xmpAlgorithmDefault && alg!=xmpPowmAlgorithms[lat.alg_index].alg) {
+      //skip this algorithm
+      while(i<tbl_count && alg_index==lookup[i].alg_index) 
+        i++;
+      continue;
+    }
+
+    uint32_t lcount = lat.instances_per_sm*handle->smCount;   //instances per wave of blocks
+    float latency;
+
+    if(count<=lcount) {
+      //no splitting, compute all in a single wave
+
+      //search for smallest size that is greater than or equal to count
+      while(i+1<tbl_count && alg_index==lookup[i+1].alg_index && lookup[i+1].instances_per_sm*handle->smCount>=count) {
+        i++;
+      }
+      
+      latency = lookup[i].latency;
+      lcount = count;
+
+    } else {
+      //possible splitting
+      uint32_t WAVES=count/lcount;    //number of waves to launch
+      lcount = WAVES*lcount;          //number of instances to launch
+      uint32_t tail_count=count-lcount;
+      //compute cost of tail
+      
+      //if tail exists
+      if(tail_count>0) {
+        LaunchParameters tail_launch= getFastestPowmLaunch(handle,alg,tail_count,lookup,tbl_count);
+
+        //if algorithm for the tail is the same combine into a single call
+        if(tail_launch.alg_index==lat.alg_index) {
+          lcount=count;
+        }
+        latency = WAVES*lat.latency+tail_launch.latency;
+      } else {
+        latency = WAVES*lat.latency;
+      }
+    } 
+    
+    float throughput = count/latency;
+
+    //maximize throughput across all algorithms
+    if(throughput>max_throughput) {
+      params.alg_index=alg_index;
+      params.count=lcount;
+      params.latency=latency;
+      max_throughput=throughput;
+    }
+    //printf("alg: %d, count: %d, lcount: %d, throughput: %f, latency: %f, max_throughput: %f\n",params.alg_index,count,lcount,throughput,latency,max_throughput);
+    
+    //skip remaining entries for this algorithm
+    while(i<tbl_count && alg_index==lookup[i].alg_index) 
+      i++;
+  }
+  return params;
+}
 
 LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision, uint32_t count, xmpAlgorithm_t alg ) {
   const Latency * lookup;
   uint32_t tbl_count;
   
-  LaunchParameters params;
-
-  float max_throughput=0;
-  params.alg_index=-1;
 
   int idx;
   if(precision>xmpPowmPrecisions[xmpPowmPrecisionsCount-1]) {
@@ -158,25 +225,7 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
     tbl_count=powm_tbl_maxwell_counts[idx];
   }
 
-  for(int i=0;i<tbl_count;i++) {
-    Latency lat=lookup[i];
-
-    if(alg!=xmpAlgorithmDefault && alg!=xmpPowmAlgorithms[lat.alg_index].alg) {
-      continue;
-    }
-
-    uint32_t lcount = MIN(lat.instances_per_sm*handle->smCount,count);
-    float throughput = lcount/lat.latency;
-    if(throughput>max_throughput) {
-      params.alg_index=lat.alg_index;
-      params.count=lcount;
-      max_throughput=throughput;
-    }
-  }
-  //hueristic:  launch as many waves of this size as possible,  we see better proformance with mulitple waves than single waves.  
-  //This is likely due to launch latency.
-  uint32_t waves = count/params.count;  //number of waves that could fit in the full size
-  params.count = waves*params.count;    //scale count by that many waves
+  LaunchParameters params = getFastestPowmLaunch(handle, alg, count, lookup, tbl_count);
     
   //Temporary work around for indexing bug
   params.count = MIN(params.count,0x7FFFFF*8/precision);

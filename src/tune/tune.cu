@@ -56,8 +56,14 @@ uint32_t rand32() {
 }
 
 
+//sort by algorithm and then by instances (high to low)
 bool operator<(Latency a, Latency b) {
-  return a.instances_per_sm<b.instances_per_sm;
+  if(a.alg_index<b.alg_index) 
+    return true;
+  else if(b.alg_index<a.alg_index)
+    return false;
+  else
+    return a.instances_per_sm>b.instances_per_sm;
 }
 
 void compute_and_add_latencies(xmpHandle_t handle, int alg, vector<Latency>& latencies, xmpIntegers_t out, xmpIntegers_t a, xmpIntegers_t exp, xmpIntegers_t mod ) {
@@ -176,38 +182,45 @@ int main() {
   sprintf(filename,"tune_%s.h",sarch);
 
   FILE *file = fopen(filename,"w");
-
-  float max_occupancy=1;
-  //max instances in a single wave at x% occupancy
-  uint32_t max_instances = smCount * 2048 * WAVES * max_occupancy;  
+  
   vector<uint32_t> counts(xmpPowmPrecisionsCount);
 
   for(int p=0;p<xmpPowmPrecisionsCount;p++) {
     uint32_t P=xmpPowmPrecisions[p];
+    float max_occupancy=1;
+    if(P>4096)
+      max_occupancy=.5;
+    //max instances in a single wave at x% occupancy
+    uint32_t max_instances = smCount * 2048 * WAVES * max_occupancy;
+    uint32_t a_instances= max_instances;
+    uint32_t exp_instances = 1;
+    uint32_t mod_instances = 1;
+    uint32_t out_instances = max_instances;
+
     vector<Latency> latencies;
     xmpIntegers_t a, exp, mod, out;
     uint32_t nlimbs = P/(sizeof(uint32_t)*8);
 
-    uint32_t *limbs = (uint32_t*)malloc(nlimbs*sizeof(uint32_t)*max_instances);
+    uint32_t *limbs = (uint32_t*)malloc(nlimbs*sizeof(uint32_t)*a_instances);
     assert(limbs!=0);
 
-    xmpCheckError(xmpIntegersCreate(handle, &a, P, max_instances));
-    xmpCheckError(xmpIntegersCreate(handle, &exp, P, max_instances));
-    xmpCheckError(xmpIntegersCreate(handle, &mod, P, max_instances));
-    xmpCheckError(xmpIntegersCreate(handle, &out, P, max_instances));
+    xmpCheckError(xmpIntegersCreate(handle, &a, P, a_instances));
+    xmpCheckError(xmpIntegersCreate(handle, &exp, P, exp_instances));
+    xmpCheckError(xmpIntegersCreate(handle, &mod, P, mod_instances));
+    xmpCheckError(xmpIntegersCreate(handle, &out, P, out_instances));
 
     //generate random data
-    for(int i=0;i<nlimbs*max_instances;i++) limbs[i]=rand32();
-    xmpCheckError(xmpIntegersImport(handle,a,nlimbs,-1,sizeof(xmpLimb_t),-1,0,limbs,max_instances));
+    for(int i=0;i<nlimbs*a_instances;i++) limbs[i]=rand32();
+    xmpCheckError(xmpIntegersImport(handle,a,nlimbs,-1,sizeof(xmpLimb_t),-1,0,limbs,a_instances));
     
-    for(int i=0;i<nlimbs*max_instances;i++) limbs[i]=rand32();
-    xmpCheckError(xmpIntegersImport(handle,exp,nlimbs,-1,sizeof(xmpLimb_t),-1,0,limbs,max_instances));
+    for(int i=0;i<nlimbs*exp_instances;i++) limbs[i]=rand32();
+    xmpCheckError(xmpIntegersImport(handle,exp,nlimbs,-1,sizeof(xmpLimb_t),-1,0,limbs,exp_instances));
     
-    for(int i=0;i<nlimbs*max_instances;i++) limbs[i]=rand32();
+    for(int i=0;i<nlimbs*mod_instances;i++) limbs[i]=rand32();
     
-    for(int i=0;i<max_instances;i++) limbs[i*nlimbs]|=0x1;  //ensure mod is odd
+    for(int i=0;i<mod_instances;i++) limbs[i*nlimbs]|=0x1;  //ensure mod is odd
 
-    xmpCheckError(xmpIntegersImport(handle,mod,nlimbs,-1,sizeof(xmpLimb_t),-1,0,limbs,max_instances));
+    xmpCheckError(xmpIntegersImport(handle,mod,nlimbs,-1,sizeof(xmpLimb_t),-1,0,limbs,mod_instances));
 
     for(int i=0;i<xmpPowmAlgorithmsCount;i++) {
       xmpPowmAlgorithm alg=xmpPowmAlgorithms[i];
