@@ -47,6 +47,7 @@ typedef enum {
   xmpErrorInvalidDevice,
   xmpErrorInvalidFormat,
   xmpErrorInvalidPrecision,
+  xmpErrorIncreaseScratchLimit,
   xmpErrorUnsupported,
   xmpErrorUnspecified,
   xmpErrorCuda,
@@ -54,20 +55,22 @@ typedef enum {
 
 
 typedef enum {
-  xmpAlgorithm
+  xmpAlgorithm,
+  xmpScratchSizeLimit
 } xmpExecutionPolicyParam_t;
 
 typedef enum {
-  xmpAlgorithmDefault,        
-  xmpAlgorithmRegMP,         
-  xmpAlgorithmDigitMP,     
+  xmpAlgorithmDefault,
+  xmpAlgorithmRegMP,
+  xmpAlgorithmDigitMP,
   xmpAlgorithmDistributedMP,
 } xmpAlgorithm_t;
 
 union xmpExecutionPolicyValue_t {
   xmpAlgorithm_t algorithm;
+  size_t         size;
   xmpExecutionPolicyValue_t(xmpAlgorithm_t a) { algorithm=a; }
-
+  xmpExecutionPolicyValue_t(size_t s) { size=s; }
 };
 
 inline const char* xmpGetErrorString (xmpError_t error) {
@@ -90,6 +93,8 @@ inline const char* xmpGetErrorString (xmpError_t error) {
       return "xmpErrorInvalidFormat";
     case xmpErrorInvalidPrecision:
       return "xmpErrorPrecision";
+    case xmpErrorIncreaseScratchLimit:
+      return "xmpIncreaseScratchLimit";
     case xmpErrorUnsupported:
       return "xmpErrorUnsupported";
     case xmpErrorUnspecified:

@@ -63,7 +63,6 @@ xmpError_t XMPAPI xmpHandleCreateWithMemoryFunctions(xmpHandle_t *handle,xmpAllo
   (*handle)->df=df;
 
   (*handle)->policy=const_cast<xmpExecutionPolicy_t>(&xmpDefaultExecutionPolicy);
-  
 
   if(cudaSuccess!=cudaGetDevice(&((*handle)->device)))
     return xmpErrorInvalidDevice;
@@ -75,6 +74,7 @@ xmpError_t XMPAPI xmpHandleCreateWithMemoryFunctions(xmpHandle_t *handle,xmpAllo
   if(prop.major<2)
     return xmpErrorInvalidDevice;
 
+  (*handle)->memorySize=prop.totalGlobalMem;
   (*handle)->arch=prop.major*10+prop.minor;
   (*handle)->smCount=prop.multiProcessorCount;
 
@@ -101,8 +101,17 @@ xmpError_t XMPAPI xmpHandleDestroy(xmpHandle_t handle) {
 
 //increases scratch size if necessary
 xmpError_t xmpSetNecessaryScratchSize(xmpHandle_t handle, size_t bytes) {
+  size_t maxSize=0;
+  
   XMP_SET_DEVICE(handle);
 
+  if(handle->policy!=NULL)
+    maxSize=handle->policy->scratch_size_limit;
+  if(maxSize==0)
+    maxSize=handle->memorySize/4*3;
+  if(bytes>maxSize)
+    return xmpErrorIncreaseScratchLimit;
+    
   if(handle->scratchSize<bytes)  {
     if(handle->scratch!=0) 
       //free existing scratch
@@ -164,7 +173,7 @@ xmpError_t XMPAPI xmpHandleSetExecutionPolicy(xmpHandle_t handle, xmpExecutionPo
   if(policy!=NULL)
     handle->policy=policy;
   else
-  handle->policy=const_cast<xmpExecutionPolicy_t>(&xmpDefaultExecutionPolicy);
+    handle->policy=const_cast<xmpExecutionPolicy_t>(&xmpDefaultExecutionPolicy);
 
   return xmpErrorSuccess;
 }
@@ -179,6 +188,7 @@ xmpError_t XMPAPI xmpExecutionPolicyCreate(xmpHandle_t handle, xmpExecutionPolic
   if(*policy==0)
     return xmpErrorInvalidMalloc;
  
+  (*policy)->scratch_size_limit=0;
   for(int i=0;i<XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS;i++)
     (*policy)->indices[i]=NULL;
 
@@ -259,6 +269,9 @@ xmpError_t XMPAPI xmpExecutionPolicySetParameter(xmpHandle_t handle, xmpExecutio
     case xmpAlgorithm:
       policy->algorithm=val.algorithm;
       break;
+    case xmpScratchSizeLimit:
+      policy->scratch_size_limit=val.size;
+      break;
     default:
       return xmpErrorInvalidParameter;
   }
@@ -269,6 +282,9 @@ xmpError_t XMPAPI xmpExecutionPolicyGetParameter(xmpHandle_t handle, xmpExecutio
   switch(param) {
     case xmpAlgorithm:
       val.algorithm=policy->algorithm;
+      break;
+    case xmpScratchSizeLimit:
+      val.size=policy->scratch_size_limit;
       break;
     default:
       return xmpErrorInvalidParameter;

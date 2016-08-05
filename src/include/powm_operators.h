@@ -55,13 +55,19 @@ xmpError_t internalPowmRegMP(xmpHandle_t handle, xmpIntegers_t out, const xmpInt
   bits=exp->precision;
   windowBits=windowBitsForPrecision(bits);
 
-  windowSize=((1<<windowBits) + 1 + DIV_ROUND_UP(bits, words*32))*words;
-  windowBytes=windowSize * 4;
-  windowBytes*=ROUND_UP(count, geometry);
+  while(true) {
+    windowSize=((1<<windowBits) + 1 + DIV_ROUND_UP(bits, words*32))*words;
+    windowBytes=windowSize * 4;
+    windowBytes*=ROUND_UP(count, geometry);
 
-  error=xmpSetNecessaryScratchSize(handle, windowBytes);
-  if(error!=xmpErrorSuccess)
-    return error;
+    error=xmpSetNecessaryScratchSize(handle, windowBytes);
+    if(error==xmpErrorSuccess)
+      break;
+    if(error!=xmpErrorIncreaseScratchLimit || windowBits<=2)
+      return error;
+    // try a smaller window
+    windowBits--;
+  }
 
   if(instances_per_block!=NULL)
     *instances_per_block=geometry;
@@ -159,14 +165,21 @@ xmpError_t internalPowmDigitMP(xmpHandle_t handle, xmpIntegers_t out, const xmpI
   bits=exp->precision;
   windowBits=windowBitsForPrecision(bits);
 
-  roundedPrecision=ROUND_UP(precision, DIGIT*32);
-  windowSize=(1<<windowBits) + 4 + DIV_ROUND_UP(bits, roundedPrecision);
-  windowBytes=windowSize * roundedPrecision/8;
-  windowBytes*=ROUND_UP(count, geometry);
+  while(true) {
+    roundedPrecision=ROUND_UP(precision, DIGIT*32);
+    windowSize=(1<<windowBits) + 4 + DIV_ROUND_UP(bits, roundedPrecision);
+    windowBytes=windowSize * roundedPrecision/8;
+    windowBytes*=ROUND_UP(count, geometry);
 
-  error=xmpSetNecessaryScratchSize(handle, windowBytes);
-  if(error!=xmpErrorSuccess)
-    return error;
+    error=xmpSetNecessaryScratchSize(handle, windowBytes);
+    if(error==xmpErrorSuccess)
+      break;
+    if(error!=xmpErrorIncreaseScratchLimit || windowBits<=2)
+      return error;
+
+    // try a smaller window size
+    windowBits--;
+  }
 
   if(instances_per_block!=NULL)
     *instances_per_block=geometry;
@@ -299,13 +312,20 @@ xmpError_t internalPowmWarpDistributedMP(xmpHandle_t handle, xmpIntegers_t out, 
     scratchBytes=(width*words*5+AR_DIGIT)*4;
     scratchBytes*=ROUND_UP(count, AR_GEOMETRY);
   }
-  windowSize=(1<<windowBits) + 1 + DIV_ROUND_UP(bits, words*width*32);
-  windowBytes=windowSize*width*words*4;
-  windowBytes*=ROUND_UP(count, geometry);
+  while(true) {
+    windowSize=(1<<windowBits) + 1 + DIV_ROUND_UP(bits, words*width*32);
+    windowBytes=windowSize*width*words*4;
+    windowBytes*=ROUND_UP(count, geometry);
 
-  error=xmpSetNecessaryScratchSize(handle, windowBytes + scratchBytes);
-  if(error!=xmpErrorSuccess)
-    return error;
+    error=xmpSetNecessaryScratchSize(handle, windowBytes + scratchBytes);
+    if(error==xmpErrorSuccess)
+      break;
+    if(error!=xmpErrorIncreaseScratchLimit || windowBits<=2)
+      return error;
+
+    // try a smaller window size%
+    windowBits--;
+  }
 
   if(instances_per_block!=NULL)
     *instances_per_block=geometry/width;

@@ -58,10 +58,12 @@ typedef uint32_t xmpLimb_t;
 
 const uint32_t XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS = 4;
 struct _xmpExecutionPolicy_t {
+  size_t scratch_size_limit;
   uint32_t *indices[XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS];
   uint32_t indices_count[XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS];
   xmpAlgorithm_t algorithm;
   _xmpExecutionPolicy_t() {
+    scratch_size_limit=0;
     for(int i=0;i<XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS; i++)
       indices[i]=NULL;
     algorithm=xmpAlgorithmDefault;
@@ -77,6 +79,7 @@ struct _xmpHandle_t {
   xmpFreeFunc hf, df;
   size_t scratchSize;
   void* scratch;
+  size_t memorySize;
   uint32_t arch;
   uint32_t smCount;
   xmpExecutionPolicy_t policy;
@@ -136,6 +139,7 @@ inline const char* getAlgorithmString(xmpAlgorithm_t algorithm) {
 }
 inline void printPolicy(xmpExecutionPolicy_t policy) {
   printf("Execution Policy:\n");
+  printf("    Scratch size limit: %ld\n", policy->scratch_size_limit);
   for(int i=0;i<XMP_EXECUTION_POLICY_MAX_INDICES_ARRAYS;i++) {
     if(policy->indices[i]!=NULL) {
       printf("    Indices[%d]: %p:%d\n", i, policy->indices[i],policy->indices_count[i]);

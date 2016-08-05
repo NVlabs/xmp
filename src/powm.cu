@@ -227,9 +227,10 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
   }
 
   LaunchParameters params = getFastestPowmLaunch(handle, alg, count, lookup, tbl_count);
-    
-  //Temporary work around for indexing bug
-  params.count = MIN(params.count,0x7FFFFF*8/precision);
+  
+  // 8/4/16 NDE: support for window sizes>1GB and the scratch_size_limit resolve this bug
+  // Temporary work around for windowing bug
+  // params.count = MIN(params.count,0x7FFFFF*8/precision);
 
   //printf("POWM: precison: %d, count: %d, lcount: %d,  alg: %d\n", precision, count, params.count, params.alg_index);
   return params;

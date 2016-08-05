@@ -408,7 +408,6 @@ __global__ void warpmp_large_ar_kernel(ar_arguments_t ar_arguments, int32_t star
   xmpLimb_t  registers[4*size+4];
   RegMP      ZERO(registers, 0, 0, size);
   int32_t    digits=divide<size>(precision);
-  uint64_t   window_offset;
   int32_t    words=precision/width;
 
   thread=blockIdx.x*blockDim.x + threadIdx.x;
