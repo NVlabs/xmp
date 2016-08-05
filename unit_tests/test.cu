@@ -1243,14 +1243,12 @@ TEST_P(PowmTest,opTests) {
 
     ASSERT_EQ(cudaSuccess,cudaDeviceSynchronize());
 
-#if 0
     //compare results
     for(int i=0;i<N;i++) {
       for(int j=0;j<climbs;j++) {
         ASSERT_EQ(h_res[c_indices[i]*climbs+j],d_res[c_indices[i]*climbs+j]);
       }
     }
-#endif
   }
 
   //clean up

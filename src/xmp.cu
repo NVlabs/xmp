@@ -54,9 +54,10 @@ xmpError_t XMPAPI xmpHandleCreateWithMemoryFunctions(xmpHandle_t *handle,xmpAllo
     return xmpErrorInvalidMalloc;
 
   (*handle)->stream=0;
-  (*handle)->scratch=0;
+  (*handle)->scratch=NULL;
   (*handle)->scratchSize=0;
-  
+  (*handle)->tmpOutSize=0;
+  (*handle)->tmpOut=NULL;
   (*handle)->ha=ha;
   (*handle)->hf=hf;
   (*handle)->da=da;
@@ -88,6 +89,7 @@ xmpError_t XMPAPI xmpHandleDestroy(xmpHandle_t handle) {
   XMP_SET_DEVICE(handle);
 
   handle->df(handle->scratch);
+  handle->df(handle->tmpOut);
 
   //free handle
   handle->hf(handle); 
@@ -119,6 +121,25 @@ xmpError_t xmpSetNecessaryScratchSize(xmpHandle_t handle, size_t bytes) {
     //allocate scratch
     handle->scratch=handle->da(bytes);
     handle->scratchSize=bytes;
+  }
+  if(handle->scratch==0)
+    return xmpErrorInvalidCudaMalloc;
+  XMP_CHECK_CUDA();
+  return xmpErrorSuccess;
+}
+//increases output size if necessary
+xmpError_t xmpSetNecessaryOutSize(xmpHandle_t handle, size_t bytes) {
+  size_t maxSize=0;
+  
+  XMP_SET_DEVICE(handle);
+
+  if(handle->tmpOutSize<bytes)  {
+    if(handle->tmpOut!=0) 
+      //free existing scratch
+      handle->df(handle->tmpOut);
+    //allocate scratch
+    handle->tmpOut=handle->da(bytes);
+    handle->tmpOutSize=bytes;
   }
   if(handle->scratch==0)
     return xmpErrorInvalidCudaMalloc;

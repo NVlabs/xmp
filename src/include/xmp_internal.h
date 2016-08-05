@@ -80,6 +80,8 @@ struct _xmpHandle_t {
   size_t scratchSize;
   void* scratch;
   size_t memorySize;
+  size_t tmpOutSize;  //some operators need this to produce inplace output
+  void* tmpOut;
   uint32_t arch;
   uint32_t smCount;
   xmpExecutionPolicy_t policy;
@@ -159,6 +161,7 @@ __global__ void xmpC2S_kernel(uint32_t N, uint32_t limbs, uint32_t stride, const
 __global__ void xmpS2C_kernel(uint32_t N, uint32_t limbs, uint32_t stride, const uint32_t * in, uint32_t * out);
 
 xmpError_t xmpSetNecessaryScratchSize(xmpHandle_t handle, size_t bytes);
+xmpError_t xmpSetNecessaryOutSize(xmpHandle_t handle, size_t bytes);
 
 inline void xmpC2S(uint32_t N, uint32_t limbs, uint32_t stride, const uint32_t * in, uint32_t * out, cudaStream_t stream) {
   dim3 threads, blocks;

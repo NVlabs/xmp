@@ -31,7 +31,7 @@ inline uint32_t windowBitsForPrecision(uint32_t precision) {
 }
 
 template<int32_t geometry, int32_t min_blocks, int32_t words, int32_t kar_mult, int32_t kar_sqr>
-xmpError_t internalPowmRegMP(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, uint32_t *instances_per_block, uint32_t *blocks_per_sm) {
+xmpError_t internalPowmRegMP(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, xmpLimb_t *out_buffer, uint32_t *instances_per_block, uint32_t *blocks_per_sm) {
   // geometry - # of threads per block
   // min_blocks - used for launch bounds
   // words is the size of the modulus in words
@@ -120,7 +120,7 @@ xmpError_t internalPowmRegMP(xmpHandle_t handle, xmpIntegers_t out, const xmpInt
     regmp_powm_kernel<geometry, min_blocks, false, words, kar_mult, kar_sqr><<<blocks, threads, 0, handle->stream>>>(powm_arguments, start, count);
   }
 
-  copy_out_arguments.out_data=out->slimbs;
+  copy_out_arguments.out_data=out_buffer;
   copy_out_arguments.out_len=DIV_ROUND_UP(precision, 32);
   copy_out_arguments.out_stride=out->stride;
   copy_out_arguments.out_indices=policy->indices[0];
@@ -142,7 +142,7 @@ xmpError_t internalPowmRegMP(xmpHandle_t handle, xmpIntegers_t out, const xmpInt
 }
 
 template<int32_t geometry, int32_t min_blocks, int32_t size>
-xmpError_t internalPowmDigitMP(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, uint32_t *instances_per_block, uint32_t *blocks_per_sm) {
+xmpError_t internalPowmDigitMP(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, xmpLimb_t *out_buffer, uint32_t *instances_per_block, uint32_t *blocks_per_sm) {
   // geometry - # of threads per block
   // min_blocks - used for launch bounds
   // size is the size of the digit in words
@@ -233,7 +233,7 @@ xmpError_t internalPowmDigitMP(xmpHandle_t handle, xmpIntegers_t out, const xmpI
     digitmp_powm_kernel<geometry, min_blocks, false, size><<<blocks, threads, 0, handle->stream>>>(powm_arguments, start, count);
   }
 
-  copy_out_arguments.out_data=out->slimbs;
+  copy_out_arguments.out_data=out_buffer;
   copy_out_arguments.out_len=DIV_ROUND_UP(precision, 32);
   copy_out_arguments.out_stride=out->stride;
   copy_out_arguments.out_indices=policy->indices[0];
@@ -284,7 +284,7 @@ class launch_ar<size, false> {
 };
 
 template<int32_t geometry, int32_t min_blocks, int32_t width, int32_t words>
-xmpError_t internalPowmWarpDistributedMP(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, uint32_t *instances_per_block, uint32_t *blocks_per_sm) {
+xmpError_t internalPowmWarpDistributedMP(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, xmpLimb_t *out_buffer, uint32_t *instances_per_block, uint32_t *blocks_per_sm) {
   // geometry - # of threads per block
   // min_blocks - used for launch bounds
   // width - threads per instance
@@ -401,7 +401,7 @@ xmpError_t internalPowmWarpDistributedMP(xmpHandle_t handle, xmpIntegers_t out, 
     warpmp_powm_kernel<geometry, min_blocks, words><<<blocks, threads, 0, handle->stream>>>(powm_arguments, start, count);
   }
 
-  copy_out_arguments.out_data=out->slimbs;
+  copy_out_arguments.out_data=out_buffer;
   copy_out_arguments.out_len=DIV_ROUND_UP(precision, 32);
   copy_out_arguments.out_stride=out->stride;
   copy_out_arguments.out_indices=policy->indices[0];
@@ -433,7 +433,7 @@ struct Latency {
   Latency(uint32_t alg_index, float latency, uint32_t instances_per_sm) : alg_index(alg_index), latency(latency), instances_per_sm(instances_per_sm) {}
 };
 
-typedef xmpError_t (*xmpPowmFunc)(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, uint32_t *instances_per_block, uint32_t *blocks_per_sm);
+typedef xmpError_t (*xmpPowmFunc)(xmpHandle_t handle, xmpIntegers_t out, const xmpIntegers_t a, const xmpIntegers_t exp, const xmpIntegers_t mod, uint32_t start, uint32_t count, xmpLimb_t *out_buffer, uint32_t *instances_per_block, uint32_t *blocks_per_sm);
 
 struct xmpPowmAlgorithm {
   xmpAlgorithm_t alg;
