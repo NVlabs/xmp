@@ -117,11 +117,10 @@ struct LaunchParameters
 #include "tune/tune_maxwell.h"
 #include "tune/tune_kepler.h"
 
-LaunchParameters getFastestPowmLaunch(xmpHandle_t handle, xmpAlgorithm_t alg, uint32_t count, const Latency *lookup, uint32_t tbl_count) {
+LaunchParameters getFastestPowmLaunch(xmpHandle_t handle, xmpAlgorithm_t alg, uint32_t max_waves, uint32_t count, const Latency *lookup, uint32_t tbl_count) {
   LaunchParameters params;
   float max_throughput=0;
   params.alg_index=-1;
-
 
   int i=0;
   while(i<tbl_count) {
@@ -152,16 +151,17 @@ LaunchParameters getFastestPowmLaunch(xmpHandle_t handle, xmpAlgorithm_t alg, ui
     } else {
       //possible splitting
       uint32_t WAVES=count/lcount;    //number of waves to launch
+      WAVES=MIN(WAVES,max_waves);
       lcount = WAVES*lcount;          //number of instances to launch
       uint32_t tail_count=count-lcount;
       //compute cost of tail
       
       //if tail exists
       if(tail_count>0) {
-        LaunchParameters tail_launch= getFastestPowmLaunch(handle,alg,tail_count,lookup,tbl_count);
+        LaunchParameters tail_launch= getFastestPowmLaunch(handle,alg,max_waves,tail_count,lookup,tbl_count);
 
         //if algorithm for the tail is the same combine into a single call
-        if(tail_launch.alg_index==lat.alg_index) {
+        if(WAVES<max_waves && tail_launch.alg_index==lat.alg_index) {
           lcount=count;
         }
         latency = WAVES*lat.latency+tail_launch.latency;
@@ -226,7 +226,13 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
     tbl_count=powm_tbl_maxwell_counts[idx];
   }
 
-  LaunchParameters params = getFastestPowmLaunch(handle, alg, count, lookup, tbl_count);
+  //hueristic to reduce the number of waves at max
+  uint32_t max_waves=8192/precision;
+  max_waves=MIN(max_waves,16);
+  max_waves=MAX(max_waves,1);
+
+
+  LaunchParameters params = getFastestPowmLaunch(handle, alg, max_waves, count, lookup, tbl_count);
   
   // 8/4/16 NDE: support for window sizes>1GB and the scratch_size_limit resolve this bug
   // Temporary work around for windowing bug
