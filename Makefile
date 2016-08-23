@@ -28,7 +28,7 @@ all: objs libs samples unit_tests perf_tests tune
 objs: tune.o xmp.o operators.o ${INST_OBJS} ${SRC_OBJS}
 
 
-tune: ${INST_OBJS} ${SRC_OBJS}
+tune: ${INST_OBJS} ${SRC_OBJS} tune.o
 	nvcc ${NVCC_FLAGS} $^ -o $@
 
 libxmp.a: ${INST_OBJS} ${SRC_OBJS}

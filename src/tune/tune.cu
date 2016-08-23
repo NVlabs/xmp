@@ -23,6 +23,7 @@ IN THE SOFTWARE.
 #include <xmp.h>
 #include <xmp_internal.h>
 #include <operators.h>
+#include <powm_operators.h>
 #include <cassert>
 #include <vector>
 #include <algorithm>
@@ -101,7 +102,7 @@ void compute_and_add_latencies(xmpHandle_t handle, int alg, vector<Latency>& lat
 
   //compute max blocks per sm
   uint32_t max_blocks_sm, instances_per_block;
-  algorithm.pfunc(handle,out,a,exp,mod,0,count,&instances_per_block,&max_blocks_sm);
+  algorithm.pfunc(handle,out,a,exp,mod,0,count,out->slimbs,&instances_per_block,&max_blocks_sm);
 
   for(int blocks_sm=1;blocks_sm<=max_blocks_sm*WAVES;blocks_sm++) {
     //compute instances
@@ -115,13 +116,13 @@ void compute_and_add_latencies(xmpHandle_t handle, int alg, vector<Latency>& lat
     xmpCheckError(xmpIntegersImport(handle,out,nlimbs,-1,sizeof(xmpLimb_t),-1,0,zero,count));
 
     //warm up
-    xmpCheckError(algorithm.pfunc(handle,out,a,exp,mod,0,count,NULL,NULL));
+    xmpCheckError(algorithm.pfunc(handle,out,a,exp,mod,0,count,out->slimbs,NULL,NULL));
     //read back gold standard
     xmpCheckError(xmpIntegersExport(handle,test,&nlimbs,-1,sizeof(uint32_t),-1,0,out,count)); //may change format type
   
     cudaEventRecord(start);
     for(int i=0;i<ITERS;i++) {
-      xmpCheckError(algorithm.pfunc(handle,out,a,exp,mod,0,count,NULL,NULL));
+      xmpCheckError(algorithm.pfunc(handle,out,a,exp,mod,0,count,out->slimbs,NULL,NULL));
     }
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
