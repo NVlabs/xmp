@@ -217,7 +217,7 @@ LaunchParameters getPowmLaunchParameters(xmpHandle_t handle, uint32_t precision,
 
   if(handle->arch<50) {
     lookup=powm_tbl_kepler[idx];
-    count=powm_tbl_kepler_counts[idx];
+    tbl_count=powm_tbl_kepler_counts[idx];
   }else {
     lookup=powm_tbl_maxwell[idx];
     tbl_count=powm_tbl_maxwell_counts[idx];
